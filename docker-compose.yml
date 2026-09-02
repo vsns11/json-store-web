@@ -1,0 +1,18 @@
+# Local development for this repo on its own. The API is a separate repository —
+# point API_BASE_URL at wherever it is running.
+name: json-store-web
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+    image: json-store-web:${APP_VERSION:-dev}
+    environment:
+      # Read by the browser, so it must be the address the API answers on from outside.
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+      APP_VERSION: ${APP_VERSION:-dev}
+    ports:
+      - '${WEB_PORT:-3000}:8080'
+    restart: unless-stopped

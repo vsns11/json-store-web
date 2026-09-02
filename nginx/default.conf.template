@@ -1,0 +1,46 @@
+server {
+    # Above 1024, so the container never needs extra capabilities.
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # The API is a separate deployment; nginx here only serves the static bundle.
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 5;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    include /etc/nginx/conf.d/security-headers.inc;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Vite writes content-hashed filenames, so these can be cached forever.
+    location /assets/ {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # The shell and the runtime config must always be revalidated, or a deploy never reaches browsers.
+    location = /index.html {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "no-store" always;
+    }
+
+    location = /config.js {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "no-store" always;
+    }
+
+    location / {
+        include /etc/nginx/conf.d/security-headers.inc;
+        try_files $uri $uri/ /index.html;
+    }
+}

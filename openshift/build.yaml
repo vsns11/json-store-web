@@ -1,0 +1,37 @@
+# Optional: let OpenShift build the image from this repository.
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: json-store-web
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: json-store-web
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://git.example.com/your-org/json-store-web.git
+      ref: main
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+      buildArgs:
+        - { name: APP_VERSION, value: '1.0.0' }
+  output:
+    to:
+      kind: ImageStreamTag
+      name: json-store-web:latest
+  triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secretReference:
+          name: json-store-web-webhook
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
