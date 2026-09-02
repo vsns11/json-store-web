@@ -14,6 +14,7 @@ import { loadCatalog } from '../lib/catalog.js'
 import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
 import { inferTemplate } from '../lib/templateMatch.js'
 import { useToasts } from '../hooks/useToasts.jsx'
+import CompareDialog from './CompareDialog.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { Icon } from './Icons.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
@@ -55,6 +56,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   const [view, setView] = useState(isNew || saved?.template ? 'form' : 'code')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [comparing, setComparing] = useState(false)
   const [dragging, setDragging] = useState(false)
 
   useEffect(() => {
@@ -246,6 +248,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         onDownload={() => downloadJson(draft.name, draft.text)}
         onUpload={() => fileInputRef.current?.click()}
         onSample={() => patch({ text: SAMPLE_PROFILE })}
+        onCompare={saved && parsed.ok ? () => setComparing(true) : null}
       />
 
       <div
@@ -334,6 +337,13 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
           event.target.value = ''
         }}
       />
+
+      {comparing && (
+        <CompareDialog
+          current={{ id: saved.id, name: draft.name, payload: parsed.value }}
+          onClose={() => setComparing(false)}
+        />
+      )}
 
       {confirmingDelete && (
         <ConfirmDialog

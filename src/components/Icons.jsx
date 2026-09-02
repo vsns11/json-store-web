@@ -37,6 +37,12 @@ export const Icon = {
       <path d="M4 7h10M4 12h7M4 17h4M17 5v14M17 19l3-3M17 19l-3-3" />
     </svg>
   ),
+  Compare: (props) => (
+    <svg {...base} {...props}>
+      <path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" />
+      <path d="M12 3v18" />
+    </svg>
+  ),
   Copy: (props) => (
     <svg {...base} {...props}>
       <rect x="9" y="9" width="11" height="11" rx="2" />

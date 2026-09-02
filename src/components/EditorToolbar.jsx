@@ -12,6 +12,7 @@ export default function EditorToolbar({
   onDownload,
   onUpload,
   onSample,
+  onCompare,
 }) {
   return (
     <div className="toolbar">
@@ -39,6 +40,11 @@ export default function EditorToolbar({
       <button className="btn btn-sm btn-ghost" onClick={onSample} title="Insert a sample payload">
         <Icon.File /> Sample
       </button>
+      {onCompare && (
+        <button className="btn btn-sm btn-ghost" onClick={onCompare} title="Compare with another profile">
+          <Icon.Compare /> Compare
+        </button>
+      )}
 
       <span className="toolbar-divider" />
 

@@ -79,9 +79,10 @@ export const api = {
     return request('/templates')
   },
 
-  list({ search = '', page = 0, size = 20, sort = 'updatedAt', direction = 'desc' } = {}) {
+  list({ search = '', tag = '', page = 0, size = 20, sort = 'updatedAt', direction = 'desc' } = {}) {
     const params = new URLSearchParams({ page, size, sort, direction })
     if (search.trim()) params.set('search', search.trim())
+    if (tag) params.set('tag', tag)
     return request(`/profiles?${params}`)
   },
 

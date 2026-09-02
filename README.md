@@ -61,6 +61,16 @@ configuration change on that side.
 The selection is stored with the profile, so **Edit** reopens that same form with everything still
 filled in — the templates chosen and the values typed — rather than only the raw JSON.
 
+**Working with a store full of near-identical profiles**
+
+- **Duplicate** copies a profile — inputs, tags and the templates behind it — and opens the copy, which
+  is how most scenarios start: the same thing with one field changed.
+- **Compare** shows what differs between the open profile and any other, path by path, rather than two
+  documents side by side. "Same but the card is declined" is the question, and a list of paths answers
+  it.
+- **Click a tag** to narrow the table to it. That is an exact filter on the tag, not a text search, so
+  `regression` in someone's notes does not muddy the list.
+
 **Everything else**
 
 - Pretty-print, minify, sort keys A→Z; live size, key, node and depth counts

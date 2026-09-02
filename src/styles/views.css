@@ -41,7 +41,7 @@
 .table th:nth-child(3) { width: 96px; }
 .table th:nth-child(4),
 .table th:nth-child(5) { width: 130px; }
-.table th:nth-child(6) { width: 116px; }
+.table th:nth-child(6) { width: 150px; }
 
 .table th {
   position: sticky;
@@ -185,7 +185,83 @@
 
 .row-actions {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* A tag is a filter: clicking one narrows the table to it. */
+.tag-button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.tag-button:hover {
+  outline: 1px solid currentColor;
+}
+
+/* ---------------------------------------------------------------------------
+   Compare
+   --------------------------------------------------------------------------- */
+.compare-list {
+  flex-direction: column;
+  padding: 6px;
+  background: var(--surface-sunken);
+  overflow-y: auto;
+}
+
+.compare-choice {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.compare-choice:hover {
+  background: var(--surface);
+}
+
+.compare-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.compare-table {
+  min-width: 0;
+  table-layout: auto;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 7px 12px;
+}
+
+.compare-table th:first-child,
+.compare-table td:first-child {
+  width: 34%;
+}
+
+.compare-before,
+.compare-after {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.compare-before.is-changed,
+.compare-before.is-removed {
+  color: var(--danger);
+}
+
+.compare-after.is-changed,
+.compare-after.is-added {
+  color: var(--success);
 }
 
 .table-message {

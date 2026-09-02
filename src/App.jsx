@@ -69,6 +69,27 @@ export default function App() {
     refresh()
   }
 
+  /** Copies a profile, templates and all, and opens the copy ready to be adjusted. */
+  const duplicateProfile = async (summary) => {
+    try {
+      const original = await api.get(summary.id)
+      const copy = await api.create({
+        name: `${original.name} (copy)`,
+        description: original.description,
+        tags: original.tags,
+        payload: original.payload,
+        template: original.template ?? null,
+      })
+      toasts.success(`Copied to “${copy.name}”`)
+      refresh()
+      setSelected(copy)
+      setEditorKey(copy.id)
+      setView('editor')
+    } catch (failure) {
+      showError(failure.message)
+    }
+  }
+
   const deleteProfile = async () => {
     const target = pendingDelete
     setPendingDelete(null)
@@ -139,6 +160,7 @@ export default function App() {
               error={error}
               onRetry={refresh}
               onOpen={openProfile}
+              onDuplicate={duplicateProfile}
               onDelete={setPendingDelete}
             />
           ) : (

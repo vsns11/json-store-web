@@ -12,7 +12,7 @@ const COLUMNS = [
 ]
 
 /** Every stored profile at a glance. Editing starts from a row. */
-export default function ProfileTable({ query, onQueryChange, page, loading, error, onRetry, onOpen, onDelete }) {
+export default function ProfileTable({ query, onQueryChange, page, loading, error, onRetry, onOpen, onDuplicate, onDelete }) {
   const { items, totalItems, totalPages } = page
   // The size bar is relative to the largest profile on this page, so it always says something.
   const largest = Math.max(1, ...items.map((item) => item.sizeBytes))
@@ -33,6 +33,11 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
         {query.search && (
           <button className="btn btn-sm btn-ghost" onClick={() => onQueryChange({ search: '' })}>
             Clear “{query.search}”
+          </button>
+        )}
+        {query.tag && (
+          <button className="btn btn-sm btn-ghost" onClick={() => onQueryChange({ tag: '' })}>
+            Tag “{query.tag}” ×
           </button>
         )}
         {loading && <span className="spinner" aria-label="Loading" />}
@@ -112,9 +117,17 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
                     <span className="cell-tags">
                       {item.tags.length === 0 && <span className="muted">—</span>}
                       {item.tags.map((tag) => (
-                        <span key={tag} className={`tag ${tintClass(tag)}`}>
+                        <button
+                          key={tag}
+                          className={`tag tag-button ${tintClass(tag)}`}
+                          title={`Show only profiles tagged ${tag}`}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            onQueryChange({ tag })
+                          }}
+                        >
                           {tag}
-                        </span>
+                        </button>
                       ))}
                     </span>
                   </td>
@@ -132,6 +145,9 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
                     <span className="row-actions" onClick={(event) => event.stopPropagation()}>
                       <button className="btn btn-sm" onClick={() => onOpen(item.id)}>
                         Edit
+                      </button>
+                      <button className="btn btn-sm" title="Duplicate" onClick={() => onDuplicate(item)}>
+                        <Icon.Copy />
                       </button>
                       <button className="btn btn-sm btn-danger" title="Delete" onClick={() => onDelete(item)}>
                         <Icon.Trash />
