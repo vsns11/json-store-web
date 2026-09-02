@@ -22,14 +22,15 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx/*.template /etc/nginx/templates/
 COPY docker-entrypoint.d/10-runtime-config.sh /docker-entrypoint.d/10-runtime-config.sh
 
-# OpenShift runs the container as a random UID with GID 0. Everything nginx and the
-# entrypoint write to must therefore be writable by the root group:
+# Two users must be able to write here: the image's own nginx user (101) under plain Docker,
+# and the arbitrary UID with GID 0 that OpenShift assigns. Owner 101, group 0, and group
+# permissions equal to owner permissions covers both.
 #   /etc/nginx/conf.d      rendered config templates
 #   /usr/share/nginx/html  config.js, rewritten on every start
-#   /var/cache/nginx /tmp  nginx runtime files
+#   /var/cache/nginx       nginx runtime files
 RUN rm -f /etc/nginx/conf.d/default.conf \
     && chmod +x /docker-entrypoint.d/10-runtime-config.sh \
-    && chgrp -R 0 /etc/nginx /usr/share/nginx/html /var/cache/nginx /docker-entrypoint.d \
+    && chown -R 101:0 /etc/nginx /usr/share/nginx/html /var/cache/nginx /docker-entrypoint.d \
     && chmod -R g=u /etc/nginx /usr/share/nginx/html /var/cache/nginx /docker-entrypoint.d
 
 USER 101
