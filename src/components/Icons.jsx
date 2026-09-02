@@ -81,6 +81,24 @@ export const Icon = {
       <path d="M4 10 8 6M4 10l4 4" />
     </svg>
   ),
+  Lock: (props) => (
+    <svg {...base} {...props}>
+      <rect x="4" y="10" width="16" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  ),
+  SignOut: (props) => (
+    <svg {...base} {...props}>
+      <path d="M15 12H5m10 0-3-3m3 3-3 3" />
+      <path d="M10 4h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7" />
+    </svg>
+  ),
+  Layers: (props) => (
+    <svg {...base} {...props}>
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 13 9 5 9-5" />
+    </svg>
+  ),
   Table: (props) => (
     <svg {...base} {...props}>
       <rect x="3" y="4" width="18" height="16" rx="2" />

@@ -1,20 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from './api/client.js'
+import ComposeView from './components/ComposeView.jsx'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
 import DocumentEditor from './components/DocumentEditor.jsx'
 import DocumentTable from './components/DocumentTable.jsx'
 import { Icon } from './components/Icons.jsx'
+import LoginScreen from './components/LoginScreen.jsx'
 import ShortcutsDialog from './components/ShortcutsDialog.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Toasts from './components/Toasts.jsx'
+import { useAuth } from './hooks/useAuth.jsx'
 import { useDocuments } from './hooks/useDocuments.js'
 import { useToasts } from './hooks/useToasts.jsx'
 import { formatBytes, formatRelativeTime } from './lib/json.js'
 
 export default function App() {
+  const { user, status, signIn, signOut } = useAuth()
   const toasts = useToasts()
   const searchRef = useRef(null)
-  const { query, update, page, stats, loading, error, refresh } = useDocuments(toasts.error)
+  const { query, update, page, stats, loading, error, refresh } = useDocuments(toasts.error, status === 'signed-in')
 
   const [view, setView] = useState('table') // 'table' while browsing, 'editor' while editing one
   const [selected, setSelected] = useState(null) // the open document, or null for a new one
@@ -80,6 +84,23 @@ export default function App() {
     }
   }
 
+  if (status === 'checking') {
+    return (
+      <div className="login">
+        <span className="spinner" />
+      </div>
+    )
+  }
+
+  if (status !== 'signed-in') {
+    return (
+      <>
+        <LoginScreen onSignIn={signIn} />
+        <Toasts />
+      </>
+    )
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -139,15 +160,26 @@ export default function App() {
           expanded={sidebarExpanded}
           view={view}
           theme={theme}
+          user={user}
           onShowDocuments={showDocuments}
           onNewDocument={startNewDocument}
+          onCompose={() => setView('compose')}
           onRefresh={refresh}
           onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           onShowShortcuts={() => setShowShortcuts(true)}
+          onSignOut={signOut}
         />
 
         <main className="content">
-          {view === 'table' ? (
+          {view === 'compose' ? (
+            <ComposeView
+              onBack={showDocuments}
+              onCreated={() => {
+                refresh()
+                setView('table')
+              }}
+            />
+          ) : view === 'table' ? (
             <DocumentTable
               query={query}
               onQueryChange={update}

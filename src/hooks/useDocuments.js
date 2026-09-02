@@ -4,7 +4,7 @@ import { api } from '../api/client.js'
 const PAGE_SIZE = 15
 
 /** Owns the document list: query state, paging, and the headline stats that sit beside it. */
-export function useDocuments(onError) {
+export function useDocuments(onError, enabled = true) {
   const [query, setQuery] = useState({ search: '', sort: 'updatedAt', direction: 'desc', page: 0 })
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState({ items: [], totalItems: 0, totalPages: 0 })
@@ -18,6 +18,7 @@ export function useDocuments(onError) {
   }, [query.search])
 
   const load = useCallback(async () => {
+    if (!enabled) return
     setLoading(true)
     try {
       const [result, storeStats] = await Promise.all([
@@ -33,7 +34,7 @@ export function useDocuments(onError) {
     } finally {
       setLoading(false)
     }
-  }, [query.sort, query.direction, query.page, debouncedSearch, onError]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [query.sort, query.direction, query.page, debouncedSearch, enabled, onError]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     load()

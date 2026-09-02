@@ -1014,151 +1014,375 @@ select {
 }
 
 /* ---------------------------------------------------------------------------
-   Form editor
+   Editable JSON tree (the Form tab)
    --------------------------------------------------------------------------- */
-.form-editor {
+.jform {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding: 16px 20px 28px;
+  overflow: auto;
+  padding: 14px 16px 24px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 22px;
 }
 
-.form-root > * + * {
-  margin-top: 2px;
-}
-
-/* One row: field name, type, value, remove. */
-.form-field {
-  display: grid;
-  grid-template-columns: minmax(120px, 200px) 92px minmax(160px, 1fr) 30px;
-  gap: 10px;
+.jline {
+  display: flex;
   align-items: center;
-  padding: 3px 0;
+  gap: 1px;
+  min-height: 24px;
+  border-radius: 5px;
+  padding-right: 6px;
 }
 
-.form-key-cell {
+.jline:hover {
+  background: var(--surface-sunken);
+}
+
+.jchildren {
+  padding-left: 14px;
+  margin-left: 7px;
+  border-left: 1px solid var(--border);
+}
+
+.jtoggle {
+  flex-shrink: 0;
+  width: 16px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 9px;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.jpunct {
+  color: var(--text-faint);
+}
+
+/* Keys keep the accent colour of the read-only tree, and stay editable. */
+.jkey {
+  min-width: 1ch;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  outline: none;
+  color: var(--accent);
+  font: inherit;
+}
+
+.jline:hover .jkey {
+  border-bottom-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.jkey:focus {
+  border-bottom-color: var(--accent);
+}
+
+.jval {
+  min-width: 1ch;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  outline: none;
+  font: inherit;
+}
+
+.jline:hover .jval {
+  border-bottom-color: var(--border-strong);
+}
+
+.jval:focus {
+  border-bottom-color: currentColor;
+}
+
+.jkey.is-invalid,
+.jval.is-invalid {
+  border-bottom: 1px solid var(--danger);
+}
+
+.jselect {
+  border: none;
+  cursor: pointer;
+}
+
+.jmeta,
+.jcollapsed {
+  margin-left: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: var(--sans);
+  font-size: 11px;
+}
+
+.jcollapsed {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.jline:hover .jmeta {
+  color: var(--text-muted);
+}
+
+.jproblem {
+  margin-left: 8px;
+  color: var(--danger);
+  font-family: var(--sans);
+  font-size: 11px;
+}
+
+/* Type and remove sit at the end of the line, out of the way until you need them. */
+.jactions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-left: 12px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.jline:hover .jactions,
+.jactions:focus-within {
+  opacity: 1;
+}
+
+.jtype {
+  padding: 1px 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-faint);
+  font-family: var(--sans);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.jremove {
+  display: grid;
+  place-items: center;
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.jremove:hover {
+  background: var(--danger-soft);
+}
+
+.jadd {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 2px 0 2px 16px;
+  padding: 1px 8px;
+  background: none;
+  border: 1px dashed var(--border-strong);
+  border-radius: 20px;
+  color: var(--text-faint);
+  font-family: var(--sans);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.jadd:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------------------
+   Template composer
+   --------------------------------------------------------------------------- */
+.compose-body {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.compose-form {
+  overflow-y: auto;
+  padding: 14px 16px 24px;
+  border-right: 1px solid var(--border);
+}
+
+.compose-heading {
+  margin: 14px 0 8px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.compose-heading:first-child {
+  margin-top: 0;
+}
+
+.compose-field {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.compose-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 12.5px;
+  font-weight: 550;
+}
+
+.compose-label em {
+  color: var(--warn);
+  font-size: 10.5px;
+  font-style: normal;
+}
+
+.compose-label small {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-weight: 400;
+}
+
+.compose-help {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
+.compose-preview {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.compose-preview-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------------------
+   Sign in
+   --------------------------------------------------------------------------- */
+.login {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.login-card {
+  width: min(360px, 100%);
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+.login-brand {
+  margin-bottom: 14px;
+  font-size: 16px;
+}
+
+.login-lead {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.login-field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.login-field span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.login-error {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: var(--danger-soft);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+.login-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.login-hint {
+  margin: 16px 0 0;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.login-hint code {
+  padding: 1px 5px;
+  background: var(--surface-sunken);
+  border-radius: 4px;
+  font-family: var(--mono);
+}
+
+.side-user {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 0;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
-.form-key {
-  padding: 5px 8px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  outline: none;
+.side-user-name {
   color: var(--text);
-  font-size: 13px;
-  font-weight: 550;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
-.form-key:hover {
-  border-color: var(--border);
-}
-
-.form-key:focus {
-  background: var(--surface);
-  border-color: var(--accent);
-}
-
-.form-key.is-invalid {
-  border-color: var(--danger);
-}
-
-.form-type {
-  padding: 5px 6px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: var(--text-faint);
+.side-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
   font-size: 11.5px;
   cursor: pointer;
 }
 
-.form-type:hover {
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-
-.form-value-input {
-  padding: 6px 9px;
-  font-size: 13px;
-}
-
-div.form-value-input {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0;
-}
-
-.form-remove {
-  opacity: 0;
-  padding: 4px 6px;
-  transition: opacity 0.12s;
-}
-
-.form-field:hover .form-remove,
-.form-section-head:hover .form-remove,
-.form-remove:focus-visible {
-  opacity: 1;
-}
-
-/* Nested objects and lists. */
-.form-section {
-  margin: 8px 0;
-}
-
-.form-section-head {
-  display: grid;
-  grid-template-columns: minmax(120px, 200px) 92px 1fr 30px;
-  gap: 10px;
-  align-items: center;
-  padding: 4px 0;
-}
-
-.form-count {
-  color: var(--text-faint);
-  font-size: 11.5px;
-}
-
-.form-index {
-  padding: 5px 8px;
-  color: var(--text-faint);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.form-children {
-  padding-left: 14px;
-  margin-left: 8px;
-  border-left: 2px solid var(--border);
-}
-
-.form-error {
+.side-signout:hover {
   color: var(--danger);
-  font-size: 11px;
-}
-
-.form-hint {
-  margin: 2px 0 6px 8px;
-  font-size: 12.5px;
-}
-
-.form-add {
-  margin: 6px 0 4px;
-  color: var(--text-muted);
-  border-style: dashed;
-}
-
-.form-editor .empty h2 {
-  font-size: 15px;
 }
 
 /* ---------------------------------------------------------------------------

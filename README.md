@@ -8,9 +8,9 @@ the API's address is supplied at container start.
 
 ```
 src/
-├── components/   table, editor, form, tree, sidebar, dialogs
-├── lib/          json.js (parse, format, syntax-error locator) · jsonPath.js (read/write by path)
-├── hooks/        document list and toasts
+├── components/   table, editor, tree form, composer, sign-in, sidebar, dialogs
+├── lib/          json.js (parse, format, syntax-error locator) · jsonPath.js · template.js (merging)
+├── hooks/        sign-in, document list, toasts
 └── api/          the HTTP client
 nginx/            config templates rendered at container start
 openshift/        Deployment, Service, Route, HPA, BuildConfig
@@ -26,15 +26,22 @@ saving brings you back to the table.
 
 **Three ways to edit a document**
 
-- **Form** (the default) — an ordinary document form. Objects become sections, lists become numbered
-  items, and every value gets a labelled input with its type beside it (`string`, `number`, `boolean`,
-  `null`, `object`, `array`). Rename a field by typing over its name, switch a field to an object or a
-  list to nest deeper, and use **Add field** / **Add item** at any level. Adding a row to a list of
+- **Form** (the default) — the document drawn as its JSON tree, braces and colouring included, with
+  every key and value editable in place. Keys keep their accent colour while you rename them, strings,
+  numbers and booleans keep theirs, and branches collapse. Change a field to an object or a list to
+  nest deeper, and use the **+ field** / **+ item** buttons at any level. Adding a row to a list of
   objects copies the shape of the last one, so filling in a template is mostly typing values. No JSON
   is written by hand.
 - **Editor** — line numbers, `Tab` indentation, and live validation that reports the exact line and
   column of the first syntax error (click the error to jump the caret there).
 - **Tree** — a collapsible view of the parsed document.
+
+**Building a big document from small ones**
+
+**New from template** composes one large document out of catalogue fragments: choose a base and
+optionally a datastore, cache, messaging and observability module, fill in the handful of fields they
+ask for, and watch the merged result build up beside the form before saving it. The catalogue comes
+from the API, so adding fragments is a configuration change on that side.
 
 **Everything else**
 
@@ -43,7 +50,15 @@ saving brings you back to the table.
 - Full-text search across names, descriptions, tags and the JSON payload itself
 - Name, description and up to 12 tags per document
 - A sidebar that expands and collapses in place, light and dark themes
+- Sign-in against the directory the API is pointed at; the session token lives in the tab only
 - `⌘/Ctrl+S` save · `⌘/Ctrl+⇧F` format · `⌘/Ctrl+K` search
+
+## Signing in
+
+The API authenticates against LDAP and answers with a bearer token, which this app keeps in
+`sessionStorage` for the tab. When the API is running locally with its built-in directory, sign in as
+`alice / secret` (may delete documents) or `bob / secret` (may not). A rejected or expired token drops
+you back to the sign-in screen automatically.
 
 ## Run it
 

@@ -60,9 +60,20 @@ function uniqueKey(object, base = 'newField') {
   return `${base}${index}`
 }
 
+function safeParse(text) {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
+
+const getIn = (root, tokens) => tokens.reduce((current, token) => current?.[token], root)
+
 /**
- * Edits a document as a form: objects become sections, arrays become numbered lists, and
- * every value gets a labelled input. Nothing here needs the reader to write JSON.
+ * The document laid out as its JSON tree — braces, indentation and colouring included — with every
+ * key and value editable in place. Reading it is reading the JSON; editing it never means typing
+ * punctuation.
  */
 export default function FormEditor({ text, isEmpty, onChange }) {
   const root = isEmpty ? {} : safeParse(text)
@@ -72,7 +83,7 @@ export default function FormEditor({ text, isEmpty, onChange }) {
       <div className="empty">
         <div>
           <h2>This payload is a single value</h2>
-          <p>The form edits documents built from objects and lists. Use the Editor tab for a bare value.</p>
+          <p>The tree edits documents built from objects and lists. Use the Editor tab for a bare value.</p>
         </div>
       </div>
     )
@@ -80,223 +91,139 @@ export default function FormEditor({ text, isEmpty, onChange }) {
 
   const apply = (next) => onChange(JSON.stringify(next, null, 2))
 
+  const handlers = {
+    onSet: (tokens, value) => apply(setAtPath(root, tokens, value)),
+    onRemove: (tokens) => apply(deleteAtPath(root, tokens)),
+    onRenameKey: (parentTokens, from, to) => {
+      const parent = parentTokens.length === 0 ? root : getIn(root, parentTokens)
+      const renamed = Object.fromEntries(
+        Object.entries(parent).map(([key, item]) => [key === from ? to : key, item]),
+      )
+      apply(parentTokens.length === 0 ? renamed : setAtPath(root, parentTokens, renamed))
+    },
+  }
+
   return (
-    <div className="form-editor">
-      <FormNode
-        value={root}
-        tokens={[]}
-        label={null}
-        onSet={(tokens, value) => apply(setAtPath(root, tokens, value))}
-        onRemove={(tokens) => apply(deleteAtPath(root, tokens))}
-        onRenameKey={(parentTokens, from, to) => {
-          const parent = parentTokens.length === 0 ? root : getIn(root, parentTokens)
-          const renamed = Object.fromEntries(
-            Object.entries(parent).map(([key, item]) => [key === from ? to : key, item]),
-          )
-          apply(parentTokens.length === 0 ? renamed : setAtPath(root, parentTokens, renamed))
-        }}
-      />
+    <div className="jform">
+      <Node value={root} tokens={[]} label={null} isLast isRoot {...handlers} />
     </div>
   )
 }
 
-function safeParse(text) {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return undefined
-  }
+function Node(props) {
+  const { value } = props
+  if (Array.isArray(value)) return <BranchNode {...props} brackets="[]" />
+  if (isContainer(value)) return <BranchNode {...props} brackets="{}" />
+  return <LeafNode {...props} />
 }
 
-function getIn(root, tokens) {
-  return tokens.reduce((current, token) => current?.[token], root)
-}
-
-/** One node of the document: an object section, a list section, or a single field. */
-function FormNode({ value, tokens, label, siblings, onSet, onRemove, onRenameKey, index }) {
-  if (Array.isArray(value)) {
-    return (
-      <ListSection
-        value={value}
-        tokens={tokens}
-        label={label}
-        siblings={siblings}
-        onSet={onSet}
-        onRemove={onRemove}
-        onRenameKey={onRenameKey}
-        index={index}
-      />
-    )
-  }
-  if (isContainer(value)) {
-    return (
-      <ObjectSection
-        value={value}
-        tokens={tokens}
-        label={label}
-        siblings={siblings}
-        onSet={onSet}
-        onRemove={onRemove}
-        onRenameKey={onRenameKey}
-        index={index}
-      />
-    )
-  }
-  return (
-    <Field
-      value={value}
-      tokens={tokens}
-      label={label}
-      siblings={siblings}
-      onSet={onSet}
-      onRemove={onRemove}
-      onRenameKey={onRenameKey}
-      index={index}
-    />
-  )
-}
-
-function ObjectSection({ value, tokens, label, siblings, onSet, onRemove, onRenameKey, index }) {
-  const entries = Object.entries(value)
-  const isRoot = tokens.length === 0
+/** An object or a list: an opening line, indented children, and a closing line. */
+function BranchNode({ value, tokens, label, siblings, isLast, isRoot, brackets, onSet, onRemove, onRenameKey }) {
+  const [open, setOpen] = useState(true)
+  const isArray = brackets === '[]'
+  const entries = isArray ? value.map((item, index) => [index, item]) : Object.entries(value)
+  const [openBrace, closeBrace] = brackets.split('')
+  const summary = `${entries.length} ${isArray ? 'item' : 'field'}${entries.length === 1 ? '' : 's'}`
 
   return (
-    <section className={isRoot ? 'form-root' : 'form-section'}>
-      {!isRoot && (
-        <SectionHeader
-          label={label}
-          index={index}
-          tokens={tokens}
-          siblings={siblings}
-          type="object"
-          count={`${entries.length} field${entries.length === 1 ? '' : 's'}`}
-          onSet={onSet}
-          onRemove={onRemove}
-          onRenameKey={onRenameKey}
-        />
-      )}
-
-      <div className={isRoot ? undefined : 'form-children'}>
-        {entries.length === 0 && <p className="form-hint muted">No fields yet.</p>}
-
-        {entries.map(([key, item], position) => (
-          <FormNode
-            key={position}
-            value={item}
-            label={key}
-            siblings={entries.map(([name]) => name)}
-            tokens={[...tokens, key]}
-            onSet={onSet}
-            onRemove={onRemove}
-            onRenameKey={onRenameKey}
-          />
-        ))}
-
-        <button
-          className="btn btn-sm form-add"
-          onClick={() => onSet([...tokens, uniqueKey(value)], '')}
-        >
-          <Icon.Plus /> Add field
+    <div className="jnode">
+      <div className="jline" title={isRoot ? undefined : formatPath(tokens)}>
+        <button className="jtoggle" onClick={() => setOpen(!open)} aria-label={open ? 'Collapse' : 'Expand'}>
+          {open ? '▾' : '▸'}
         </button>
-      </div>
-    </section>
-  )
-}
 
-function ListSection({ value, tokens, label, siblings, onSet, onRemove, onRenameKey, index }) {
-  return (
-    <section className="form-section">
-      <SectionHeader
-        label={label}
-        index={index}
-        tokens={tokens}
-        siblings={siblings}
-        type="array"
-        count={`${value.length} item${value.length === 1 ? '' : 's'}`}
-        onSet={onSet}
-        onRemove={onRemove}
-        onRenameKey={onRenameKey}
-      />
+        {label !== null && (
+          <KeyInput label={label} tokens={tokens} siblings={siblings} onRenameKey={onRenameKey} />
+        )}
 
-      <div className="form-children">
-        {value.length === 0 && <p className="form-hint muted">No items yet.</p>}
+        <span className="jpunct">{openBrace}</span>
 
-        {value.map((item, position) => (
-          <FormNode
-            key={position}
-            value={item}
-            label={null}
-            index={position}
-            tokens={[...tokens, position]}
-            onSet={onSet}
-            onRemove={onRemove}
-            onRenameKey={onRenameKey}
+        {!open && (
+          <button className="jcollapsed" onClick={() => setOpen(true)}>
+            … {summary} <span className="jpunct">{closeBrace}</span>
+            {!isLast && <span className="jpunct">,</span>}
+          </button>
+        )}
+
+        {open && <span className="jmeta">{summary}</span>}
+
+        {!isRoot && (
+          <RowControls
+            type={isArray ? 'array' : 'object'}
+            onType={(next) => onSet(tokens, emptyValue(next))}
+            onRemove={() => onRemove(tokens)}
           />
-        ))}
-
-        <button
-          className="btn btn-sm form-add"
-          // A new row copies the shape of the last one, so lists of objects stay consistent.
-          onClick={() => onSet([...tokens, value.length], value.length ? blankLike(value.at(-1)) : '')}
-        >
-          <Icon.Plus /> Add item
-        </button>
+        )}
       </div>
-    </section>
-  )
-}
 
-function SectionHeader({ label, index, tokens, siblings, type, count, onSet, onRemove, onRenameKey }) {
-  return (
-    <header className="form-section-head" title={formatPath(tokens)}>
-      {label === null ? (
-        <span className="form-index">Item {index + 1}</span>
-      ) : (
-        <KeyLabel label={label} tokens={tokens} siblings={siblings} onRenameKey={onRenameKey} />
+      {open && (
+        <>
+          <div className="jchildren">
+            {entries.map(([key, item], position) => (
+              <Node
+                key={position}
+                value={item}
+                label={isArray ? null : key}
+                siblings={isArray ? undefined : entries.map(([name]) => name)}
+                tokens={[...tokens, key]}
+                isLast={position === entries.length - 1}
+                onSet={onSet}
+                onRemove={onRemove}
+                onRenameKey={onRenameKey}
+              />
+            ))}
+
+            <button
+              className="jadd"
+              onClick={() =>
+                isArray
+                  ? // A new row copies the shape of the last one, so lists of objects stay consistent.
+                    onSet([...tokens, value.length], value.length ? blankLike(value.at(-1)) : '')
+                  : onSet([...tokens, uniqueKey(value)], '')
+              }
+            >
+              <Icon.Plus /> {isArray ? 'item' : 'field'}
+            </button>
+          </div>
+
+          <div className="jline jclose">
+            <span className="jtoggle" />
+            <span className="jpunct">{closeBrace}</span>
+            {!isLast && <span className="jpunct">,</span>}
+          </div>
+        </>
       )}
-      <TypeSelect
-        type={type}
-        onChange={(next) => onSet(tokens, emptyValue(next))}
-      />
-      <span className="form-count">{count}</span>
-      <button className="btn btn-sm btn-danger form-remove" title="Remove" onClick={() => onRemove(tokens)}>
-        <Icon.Trash />
-      </button>
-    </header>
+    </div>
   )
 }
 
-function Field({ value, tokens, label, siblings, index, onSet, onRemove, onRenameKey }) {
+function LeafNode({ value, tokens, label, siblings, isLast, onSet, onRemove, onRenameKey }) {
   const type = typeOf(value)
 
   return (
-    <div className="form-field" title={formatPath(tokens)}>
-      {label === null ? (
-        <span className="form-index">Item {index + 1}</span>
-      ) : (
-        <KeyLabel label={label} tokens={tokens} siblings={siblings} onRenameKey={onRenameKey} />
-      )}
+    <div className="jline" title={formatPath(tokens)}>
+      <span className="jtoggle" />
 
-      <TypeSelect
+      {label !== null && <KeyInput label={label} tokens={tokens} siblings={siblings} onRenameKey={onRenameKey} />}
+
+      <ValueInput type={type} value={value} onChange={(next) => onSet(tokens, next)} />
+      {!isLast && <span className="jpunct">,</span>}
+
+      <RowControls
         type={type}
-        onChange={(next) => onSet(tokens, next === type ? value : convert(value, next))}
+        onType={(next) => onSet(tokens, next === type ? value : convert(value, next))}
+        onRemove={() => onRemove(tokens)}
       />
-
-      <ValueControl type={type} value={value} onChange={(next) => onSet(tokens, next)} />
-
-      <button className="btn btn-sm btn-danger form-remove" title="Remove" onClick={() => onRemove(tokens)}>
-        <Icon.Trash />
-      </button>
     </div>
   )
 }
 
 /**
- * The field name, edited in place. Each keystroke that yields a usable name is applied at once,
- * so what the form shows is always what the document holds; a name that cannot be applied yet
- * (empty, or already taken by a sibling) is kept as a draft and explained underneath.
+ * The key, edited in place. Each keystroke that yields a usable name is applied at once, so what
+ * the tree shows is always what the document holds; a name that cannot be applied yet (empty, or
+ * already taken by a sibling) stays a draft and is explained beside it.
  */
-function KeyLabel({ label, tokens, siblings = [], onRenameKey }) {
+function KeyInput({ label, tokens, siblings = [], onRenameKey }) {
   const [draft, setDraft] = useState(label)
 
   useEffect(() => setDraft(label), [label])
@@ -313,37 +240,29 @@ function KeyLabel({ label, tokens, siblings = [], onRenameKey }) {
   }
 
   return (
-    <span className="form-key-cell">
+    <>
+      <span className="jpunct">"</span>
       <input
-        className={`form-key${problem ? ' is-invalid' : ''}`}
+        className={`jkey${problem ? ' is-invalid' : ''}`}
         value={draft}
+        size={1}
+        style={{ width: `${Math.max(draft.length, 1)}ch` }}
         spellCheck="false"
         aria-label="Field name"
         onChange={(event) => change(event.target.value)}
-        // Nothing is pending on blur, so an unusable draft simply reverts.
         onBlur={() => setDraft(label)}
         onKeyDown={(event) => {
           if (event.key === 'Escape' || event.key === 'Enter') event.target.blur()
         }}
       />
-      {problem && <span className="form-error">{problem}</span>}
-    </span>
+      <span className="jpunct">"</span>
+      <span className="jpunct">:</span>
+      {problem && <span className="jproblem">{problem}</span>}
+    </>
   )
 }
 
-function TypeSelect({ type, onChange }) {
-  return (
-    <select className="form-type" value={type} onChange={(event) => onChange(event.target.value)} aria-label="Type">
-      {TYPES.map((option) => (
-        <option key={option} value={option}>
-          {option}
-        </option>
-      ))}
-    </select>
-  )
-}
-
-function ValueControl({ type, value, onChange }) {
+function ValueInput({ type, value, onChange }) {
   // Numbers need a draft: "1." and "-" are worth typing but are not numbers yet.
   const [draft, setDraft] = useState(String(value ?? ''))
 
@@ -353,7 +272,11 @@ function ValueControl({ type, value, onChange }) {
 
   if (type === 'boolean') {
     return (
-      <select className="input form-value-input" value={String(value)} onChange={(event) => onChange(event.target.value === 'true')}>
+      <select
+        className="jval token-boolean jselect"
+        value={String(value)}
+        onChange={(event) => onChange(event.target.value === 'true')}
+      >
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
@@ -361,34 +284,57 @@ function ValueControl({ type, value, onChange }) {
   }
 
   if (type === 'null') {
-    return <input className="input form-value-input" value="null" disabled />
+    return <span className="jval token-null">null</span>
   }
 
   if (type === 'number') {
     const invalid = draft.trim() === '' || Number.isNaN(Number(draft))
     return (
-      <div className="form-value-input">
+      <>
         <input
-          className={`input${invalid ? ' is-invalid' : ''}`}
+          className={`jval token-number${invalid ? ' is-invalid' : ''}`}
           value={draft}
           inputMode="decimal"
+          style={{ width: `${Math.max(draft.length, 1)}ch` }}
           onChange={(event) => {
             setDraft(event.target.value)
             const parsed = Number(event.target.value)
             if (event.target.value.trim() !== '' && !Number.isNaN(parsed)) onChange(parsed)
           }}
         />
-        {invalid && <span className="form-error">Not a number</span>}
-      </div>
+        {invalid && <span className="jproblem">not a number</span>}
+      </>
     )
   }
 
   return (
-    <input
-      className="input form-value-input"
-      value={value}
-      placeholder="value"
-      onChange={(event) => onChange(event.target.value)}
-    />
+    <>
+      <span className="jpunct token-string">"</span>
+      <input
+        className="jval token-string"
+        value={value}
+        style={{ width: `${Math.max(String(value).length, 1)}ch` }}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <span className="jpunct token-string">"</span>
+    </>
+  )
+}
+
+/** The controls that appear at the end of a line on hover: change type, remove. */
+function RowControls({ type, onType, onRemove }) {
+  return (
+    <span className="jactions">
+      <select className="jtype" value={type} onChange={(event) => onType(event.target.value)} aria-label="Type">
+        {TYPES.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <button className="jremove" title="Remove" onClick={onRemove}>
+        <Icon.Trash />
+      </button>
+    </span>
   )
 }
