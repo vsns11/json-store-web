@@ -1,14 +1,17 @@
-import { API_BASE_URL, APP_VERSION } from '../config.js'
 import { Icon } from './Icons.jsx'
 
-/** The navigation rail. Collapsed it shows icons; the hamburger expands it in place. */
+/**
+ * The navigation rail. Collapsed it shows icons; the hamburger expands it in place.
+ * Only a destination the app is actually on is highlighted — editing an existing profile
+ * arrives from the table, so nothing is marked active then.
+ */
 export default function Sidebar({
   expanded,
-  view,
+  activeItem,
   theme,
   user,
-  onShowDocuments,
-  onNewDocument,
+  onShowProfiles,
+  onNewProfile,
   onCompose,
   onRefresh,
   onToggleTheme,
@@ -16,9 +19,9 @@ export default function Sidebar({
   onSignOut,
 }) {
   const items = [
-    { key: 'documents', label: 'All documents', icon: <Icon.Table />, active: view === 'table', onClick: onShowDocuments },
-    { key: 'new', label: 'New document', icon: <Icon.Plus />, active: view === 'editor', onClick: onNewDocument },
-    { key: 'compose', label: 'New from template', icon: <Icon.Layers />, active: view === 'compose', onClick: onCompose },
+    { key: 'profiles', label: 'All profiles', icon: <Icon.Table />, onClick: onShowProfiles },
+    { key: 'new', label: 'New profile', icon: <Icon.Plus />, onClick: onNewProfile },
+    { key: 'compose', label: 'New profile from template', icon: <Icon.Layers />, onClick: onCompose },
     { key: 'refresh', label: 'Refresh', icon: <Icon.Refresh />, onClick: onRefresh },
     {
       key: 'theme',
@@ -35,7 +38,7 @@ export default function Sidebar({
         {items.map((item) => (
           <button
             key={item.key}
-            className={`side-item${item.active ? ' is-active' : ''}`}
+            className={`side-item${item.key === activeItem ? ' is-active' : ''}`}
             onClick={item.onClick}
             title={expanded ? undefined : item.label}
           >
@@ -56,8 +59,6 @@ export default function Sidebar({
             </button>
           </div>
         )}
-        <span>Version {APP_VERSION}</span>
-        <span title={API_BASE_URL || window.location.origin}>API {API_BASE_URL || 'same origin'}</span>
       </footer>
     </aside>
   )

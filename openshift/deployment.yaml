@@ -26,7 +26,6 @@ spec:
             # Empty means same origin: the Route sends /api to the API service on this host.
             # Set it to the API's own URL if the two are on different hostnames.
             - { name: API_BASE_URL, value: '' }
-            - { name: APP_VERSION, value: '1.0.0' }
           resources:
             requests: { cpu: 50m, memory: 64Mi }
             limits: { memory: 128Mi }

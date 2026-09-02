@@ -230,19 +230,23 @@ export function formatRelativeTime(iso) {
   return 'just now'
 }
 
-export const SAMPLE_DOCUMENT = JSON.stringify(
+/** Inserted by the Sample button: the shape a scenario profile usually takes. */
+export const SAMPLE_PROFILE = JSON.stringify(
   {
-    id: 'nest-42',
-    name: 'Sample payload',
-    active: true,
-    score: 9.75,
-    tags: ['demo', 'json', 'postgres'],
-    owner: { email: 'ada@example.com', roles: ['admin', 'editor'] },
-    history: [
-      { at: '2026-01-14T09:30:00Z', action: 'created' },
-      { at: '2026-02-02T17:05:00Z', action: 'updated' },
-    ],
-    archivedAt: null,
+    scenario: 'checkout',
+    name: 'Checkout — gift card plus card',
+    environment: 'staging',
+    customer: { id: 'cus_1042', country: 'NL', loyaltyTier: 'gold' },
+    basket: {
+      currency: 'EUR',
+      lines: [
+        { sku: 'NEST-01', quantity: 1, unitPriceMinor: 4999 },
+        { sku: 'NEST-CABLE', quantity: 2, unitPriceMinor: 1200 },
+      ],
+    },
+    payment: { method: 'card', brand: 'visa', outcome: 'approved', giftCardMinor: 2000 },
+    expected: { outcome: 'success', status: 'paid', emails: ['order-confirmation'] },
+    notes: null,
   },
   null,
   2,

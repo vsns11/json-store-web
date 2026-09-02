@@ -4,15 +4,11 @@ name: json-store-web
 
 services:
   web:
-    build:
-      context: .
-      args:
-        APP_VERSION: ${APP_VERSION:-dev}
+    build: .
     image: json-store-web:${APP_VERSION:-dev}
     environment:
       # Read by the browser, so it must be the address the API answers on from outside.
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
-      APP_VERSION: ${APP_VERSION:-dev}
     ports:
       - '${WEB_PORT:-3000}:8080'
     restart: unless-stopped

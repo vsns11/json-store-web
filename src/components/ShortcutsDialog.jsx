@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
 const SHORTCUTS = [
-  ['⌘ / Ctrl + S', 'Save the open document'],
+  ['⌘ / Ctrl + S', 'Save the open profile'],
   ['⌘ / Ctrl + ⇧ + F', 'Format the JSON'],
   ['⌘ / Ctrl + K', 'Focus the search box'],
   ['Tab', 'Indent inside the editor'],

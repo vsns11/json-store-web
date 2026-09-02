@@ -3,7 +3,7 @@
 set -eu
 
 cat > /usr/share/nginx/html/config.js <<CONFIG
-window.__APP_CONFIG__ = { apiBaseUrl: "${API_BASE_URL:-}", version: "${APP_VERSION:-dev}" };
+window.__APP_CONFIG__ = { apiBaseUrl: "${API_BASE_URL:-}" };
 CONFIG
 
-echo "runtime config: apiBaseUrl='${API_BASE_URL:-}' version='${APP_VERSION:-dev}'"
+echo "runtime config: apiBaseUrl='${API_BASE_URL:-}'"

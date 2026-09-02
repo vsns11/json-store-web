@@ -82,26 +82,26 @@ export const api = {
   list({ search = '', page = 0, size = 20, sort = 'updatedAt', direction = 'desc' } = {}) {
     const params = new URLSearchParams({ page, size, sort, direction })
     if (search.trim()) params.set('search', search.trim())
-    return request(`/documents?${params}`)
+    return request(`/profiles?${params}`)
   },
 
   get(id) {
-    return request(`/documents/${id}`)
+    return request(`/profiles/${id}`)
   },
 
   create(document) {
-    return request('/documents', { method: 'POST', body: JSON.stringify(document) })
+    return request('/profiles', { method: 'POST', body: JSON.stringify(document) })
   },
 
   update(id, document) {
-    return request(`/documents/${id}`, { method: 'PUT', body: JSON.stringify(document) })
+    return request(`/profiles/${id}`, { method: 'PUT', body: JSON.stringify(document) })
   },
 
   remove(id) {
-    return request(`/documents/${id}`, { method: 'DELETE' })
+    return request(`/profiles/${id}`, { method: 'DELETE' })
   },
 
   stats() {
-    return request('/documents/stats')
+    return request('/profiles/stats')
   },
 }

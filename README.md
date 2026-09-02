@@ -1,6 +1,7 @@
 # JSON Store Web
 
-React single-page app for storing, formatting and browsing JSON documents. It is a pure static bundle —
+React single-page app for storing, formatting and browsing test-scenario profiles — each profile being
+a named set of JSON inputs a scenario runs with. It is a pure static bundle —
 nginx serves it, and it talks to the JSON Store API over HTTP.
 
 The API lives in its own repository (`json-store-api`). This repo has no build-time dependency on it;
@@ -20,13 +21,13 @@ openshift/        Deployment, Service, Route, HPA, BuildConfig
 
 **Everything stored, in a table**
 
-The landing view lists every document — name, description, tags, size, created and updated — with
-sortable columns, pagination and search. Editing starts from a row: **Edit** opens the document, and
-saving brings you back to the table.
+The landing view lists every profile — name, description, tags, size, created and updated — with
+sortable columns, pagination and search. Editing starts from a row: **Edit** opens the profile, and
+saving brings you back to the table. Profiles are created, updated and deleted from here.
 
-**Three ways to edit a document**
+**Three ways to edit a profile's inputs**
 
-- **Form** (the default) — the document drawn as its JSON tree, braces and colouring included, with
+- **Form** (the default) — the inputs drawn as their JSON tree, braces and colouring included, with
   every key and value editable in place. Keys keep their accent colour while you rename them, strings,
   numbers and booleans keep theirs, and branches collapse. Change a field to an object or a list to
   nest deeper, and use the **+ field** / **+ item** buttons at any level. Adding a row to a list of
@@ -36,19 +37,19 @@ saving brings you back to the table.
   column of the first syntax error (click the error to jump the caret there).
 - **Tree** — a collapsible view of the parsed document.
 
-**Building a big document from small ones**
+**Building a big profile from small ones**
 
-**New from template** composes one large document out of catalogue fragments: choose a base and
-optionally a datastore, cache, messaging and observability module, fill in the handful of fields they
-ask for, and watch the merged result build up beside the form before saving it. The catalogue comes
-from the API, so adding fragments is a configuration change on that side.
+**New profile from template** composes one large profile out of catalogue fragments: choose a scenario
+and optionally a customer, payment, delivery and expectation module, fill in the handful of fields they
+ask for, and watch the merged result build up beside the form before saving it. The catalogue comes from
+the API, so adding fragments is a configuration change on that side.
 
 **Everything else**
 
 - Pretty-print, minify, sort keys A→Z; live size, key, node and depth counts
 - Import a `.json` file by picking it or dropping it on the editor; copy and download
-- Full-text search across names, descriptions, tags and the JSON payload itself
-- Name, description and up to 12 tags per document
+- Full-text search across names, descriptions, tags and the inputs themselves
+- Name, description and up to 12 tags per profile
 - A sidebar that expands and collapses in place, light and dark themes
 - Sign-in against the directory the API is pointed at; the session token lives in the tab only
 - `⌘/Ctrl+S` save · `⌘/Ctrl+⇧F` format · `⌘/Ctrl+K` search
@@ -57,7 +58,7 @@ from the API, so adding fragments is a configuration change on that side.
 
 The API authenticates against LDAP and answers with a bearer token, which this app keeps in
 `sessionStorage` for the tab. When the API is running locally with its built-in directory, sign in as
-`alice / secret` (may delete documents) or `bob / secret` (may not). A rejected or expired token drops
+`alice / secret` (may delete profiles) or `bob / secret` (may not). A rejected or expired token drops
 you back to the sign-in screen automatically.
 
 ## Run it
@@ -83,9 +84,8 @@ The bundle is built once and configured at start, so the same image ships to eve
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `API_BASE_URL` | empty | Where the browser reaches the API. Empty means same origin |
-| `APP_VERSION` | `dev` | Shown in the menu |
 
-The container writes these into `/usr/share/nginx/html/config.js` on start; `index.html` loads it before
+The container writes this into `/usr/share/nginx/html/config.js` on start; `index.html` loads it before
 the bundle. For static hosting (S3+CloudFront, Pages, Netlify, Vercel) there is no container, so set
 `VITE_API_BASE_URL` at build time instead and upload `dist/`.
 

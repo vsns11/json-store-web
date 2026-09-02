@@ -21,8 +21,6 @@ spec:
     type: Docker
     dockerStrategy:
       dockerfilePath: Dockerfile
-      buildArgs:
-        - { name: APP_VERSION, value: '1.0.0' }
   output:
     to:
       kind: ImageStreamTag

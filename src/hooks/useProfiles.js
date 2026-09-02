@@ -4,7 +4,7 @@ import { api } from '../api/client.js'
 const PAGE_SIZE = 15
 
 /** Owns the document list: query state, paging, and the headline stats that sit beside it. */
-export function useDocuments(onError, enabled = true) {
+export function useProfiles(onError, enabled = true) {
   const [query, setQuery] = useState({ search: '', sort: 'updatedAt', direction: 'desc', page: 0 })
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState({ items: [], totalItems: 0, totalPages: 0 })

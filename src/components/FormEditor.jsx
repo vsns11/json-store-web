@@ -71,9 +71,9 @@ function safeParse(text) {
 const getIn = (root, tokens) => tokens.reduce((current, token) => current?.[token], root)
 
 /**
- * The document laid out as its JSON tree — braces, indentation and colouring included — with every
- * key and value editable in place. Reading it is reading the JSON; editing it never means typing
- * punctuation.
+ * The profile's inputs laid out as their JSON tree — braces, indentation and colouring included —
+ * with every key and value editable in place. Reading it is reading the JSON; editing it never
+ * means typing punctuation.
  */
 export default function FormEditor({ text, isEmpty, onChange }) {
   const root = isEmpty ? {} : safeParse(text)
@@ -82,8 +82,8 @@ export default function FormEditor({ text, isEmpty, onChange }) {
     return (
       <div className="empty">
         <div>
-          <h2>This payload is a single value</h2>
-          <p>The tree edits documents built from objects and lists. Use the Editor tab for a bare value.</p>
+          <h2>These inputs are a single value</h2>
+          <p>The tree edits inputs built from objects and lists. Use the Editor tab for a bare value.</p>
         </div>
       </div>
     )
@@ -220,7 +220,7 @@ function LeafNode({ value, tokens, label, siblings, isLast, onSet, onRemove, onR
 
 /**
  * The key, edited in place. Each keystroke that yields a usable name is applied at once, so what
- * the tree shows is always what the document holds; a name that cannot be applied yet (empty, or
+ * the tree shows is always what the profile holds; a name that cannot be applied yet (empty, or
  * already taken by a sibling) stays a draft and is explained beside it.
  */
 function KeyInput({ label, tokens, siblings = [], onRenameKey }) {

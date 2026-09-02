@@ -107,13 +107,13 @@ export default function ComposeView({ onBack, onCreated }) {
       <header className="editor-header">
         <div className="header-row">
           <button className="btn btn-ghost back-button" onClick={onBack} title="Back to all documents">
-            <Icon.Back /> All documents
+            <Icon.Back /> All profiles
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <input
               className="title-input"
               value={name}
-              placeholder="Untitled document"
+              placeholder="Name this scenario"
               maxLength={120}
               onChange={(event) => {
                 setNameEdited(true)
@@ -123,7 +123,7 @@ export default function ComposeView({ onBack, onCreated }) {
             <input
               className="description-input"
               value={meta.description}
-              placeholder="Add a short description…"
+              placeholder="What this scenario covers…"
               maxLength={500}
               onChange={(event) => setMeta({ ...meta, description: event.target.value })}
             />
@@ -213,7 +213,7 @@ export default function ComposeView({ onBack, onCreated }) {
 
         <div className="compose-preview">
           <div className="compose-preview-head">
-            <span>Composed document</span>
+            <span>Composed profile</span>
             <span className="muted">{formatBytes(byteSize(serialized))}</span>
           </div>
           <JsonTree value={composed} />

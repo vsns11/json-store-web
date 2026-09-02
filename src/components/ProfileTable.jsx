@@ -4,13 +4,13 @@ import { Icon } from './Icons.jsx'
 const COLUMNS = [
   { key: 'name', label: 'Name', sortable: true },
   { key: 'tags', label: 'Tags', sortable: false },
-  { key: 'sizeBytes', label: 'Size', sortable: true, align: 'right' },
+  { key: 'sizeBytes', label: 'Inputs', sortable: true, align: 'right', title: 'Size of the inputs once stored' },
   { key: 'createdAt', label: 'Created', sortable: true },
   { key: 'updatedAt', label: 'Updated', sortable: true },
 ]
 
-/** Every stored document at a glance. Editing starts from a row. */
-export default function DocumentTable({ query, onQueryChange, page, loading, error, onRetry, onOpen, onDelete }) {
+/** Every stored profile at a glance. Editing starts from a row. */
+export default function ProfileTable({ query, onQueryChange, page, loading, error, onRetry, onOpen, onDelete }) {
   const { items, totalItems, totalPages } = page
 
   const sortBy = (column) => {
@@ -23,7 +23,7 @@ export default function DocumentTable({ query, onQueryChange, page, loading, err
     <section className="panel">
       <header className="table-head">
         <h1 className="table-title">
-          Documents
+          Profiles
           {totalItems > 0 && <span className="muted"> · {totalItems}</span>}
         </h1>
         {query.search && (
@@ -52,6 +52,7 @@ export default function DocumentTable({ query, onQueryChange, page, loading, err
                     className={[column.sortable ? 'is-sortable' : '', column.align === 'right' ? 'is-right' : '']
                       .filter(Boolean)
                       .join(' ')}
+                    title={column.title}
                     onClick={() => sortBy(column)}
                     aria-sort={query.sort === column.key ? (query.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
@@ -78,7 +79,7 @@ export default function DocumentTable({ query, onQueryChange, page, loading, err
                   <td colSpan={6}>
                     <div className="table-message">
                       <p className="muted">
-                        {query.search ? `Nothing matches “${query.search}”` : 'No documents stored yet'}
+                        {query.search ? `Nothing matches “${query.search}”` : 'No profiles stored yet'}
                       </p>
                     </div>
                   </td>

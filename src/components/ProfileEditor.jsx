@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api/client.js'
 import {
-  SAMPLE_DOCUMENT,
+  SAMPLE_PROFILE,
   byteSize,
   describeShape,
   formatJson,
@@ -25,7 +25,7 @@ const snapshot = (draft) => JSON.stringify(draft)
  * Edits one document. Mounted with a key of the document id, so switching
  * documents always starts from a clean draft.
  */
-export default function DocumentEditor({ document: saved, onSaved, onDeleted, onBack }) {
+export default function ProfileEditor({ document: saved, onSaved, onDeleted, onBack }) {
   const isNew = !saved
   const toasts = useToasts()
   const fileInputRef = useRef(null)
@@ -167,20 +167,20 @@ export default function DocumentEditor({ document: saved, onSaved, onDeleted, on
       <header className="editor-header">
         <div className="header-row">
           <button className="btn btn-ghost back-button" onClick={onBack} title="Back to all documents">
-            <Icon.Back /> All documents
+            <Icon.Back /> All profiles
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <input
               className="title-input"
               value={draft.name}
-              placeholder="Untitled document"
+              placeholder="Name this scenario"
               maxLength={120}
               onChange={(event) => patch({ name: event.target.value })}
             />
             <input
               className="description-input"
               value={draft.description}
-              placeholder="Add a short description…"
+              placeholder="What this scenario covers…"
               maxLength={500}
               onChange={(event) => patch({ description: event.target.value })}
             />
@@ -200,7 +200,7 @@ export default function DocumentEditor({ document: saved, onSaved, onDeleted, on
         onCopy={copy}
         onDownload={download}
         onUpload={() => fileInputRef.current?.click()}
-        onSample={() => patch({ text: SAMPLE_DOCUMENT })}
+        onSample={() => patch({ text: SAMPLE_PROFILE })}
       />
 
       <div
@@ -234,7 +234,8 @@ export default function DocumentEditor({ document: saved, onSaved, onDeleted, on
       <StatusBar
         parsed={parsed}
         shape={shape}
-        size={byteSize(draft.text)}
+        // The stored size is the minified payload, which is what the profile list shows too.
+        size={parsed.ok ? byteSize(JSON.stringify(parsed.value)) : byteSize(draft.text)}
         dirty={dirty}
         saving={saving}
         isNew={isNew}
@@ -260,7 +261,7 @@ export default function DocumentEditor({ document: saved, onSaved, onDeleted, on
 
       {confirmingDelete && (
         <ConfirmDialog
-          title="Delete document"
+          title="Delete profile"
           message={`“${saved.name}” will be removed from PostgreSQL. This cannot be undone.`}
           confirmLabel="Delete"
           onConfirm={remove}

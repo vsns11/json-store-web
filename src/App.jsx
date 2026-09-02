@@ -2,15 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from './api/client.js'
 import ComposeView from './components/ComposeView.jsx'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
-import DocumentEditor from './components/DocumentEditor.jsx'
-import DocumentTable from './components/DocumentTable.jsx'
+import ProfileEditor from './components/ProfileEditor.jsx'
+import ProfileTable from './components/ProfileTable.jsx'
 import { Icon } from './components/Icons.jsx'
 import LoginScreen from './components/LoginScreen.jsx'
 import ShortcutsDialog from './components/ShortcutsDialog.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Toasts from './components/Toasts.jsx'
 import { useAuth } from './hooks/useAuth.jsx'
-import { useDocuments } from './hooks/useDocuments.js'
+import { useProfiles } from './hooks/useProfiles.js'
 import { useToasts } from './hooks/useToasts.jsx'
 import { formatBytes, formatRelativeTime } from './lib/json.js'
 
@@ -18,10 +18,10 @@ export default function App() {
   const { user, status, signIn, signOut } = useAuth()
   const toasts = useToasts()
   const searchRef = useRef(null)
-  const { query, update, page, stats, loading, error, refresh } = useDocuments(toasts.error, status === 'signed-in')
+  const { query, update, page, stats, loading, error, refresh } = useProfiles(toasts.error, status === 'signed-in')
 
   const [view, setView] = useState('table') // 'table' while browsing, 'editor' while editing one
-  const [selected, setSelected] = useState(null) // the open document, or null for a new one
+  const [selected, setSelected] = useState(null) // the open profile, or null for a new one
   const [editorKey, setEditorKey] = useState('new')
   const [pendingDelete, setPendingDelete] = useState(null)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -49,29 +49,29 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const openDocument = async (id) => {
+  const openProfile = async (id) => {
     try {
-      const document = await api.get(id)
-      setSelected(document)
-      setEditorKey(document.id)
+      const profile = await api.get(id)
+      setSelected(profile)
+      setEditorKey(profile.id)
       setView('editor')
     } catch (failure) {
       toasts.error(failure.message)
     }
   }
 
-  const startNewDocument = () => {
+  const startNewProfile = () => {
     setSelected(null)
     setEditorKey(`new-${Date.now()}`)
     setView('editor')
   }
 
-  const showDocuments = () => {
+  const showProfiles = () => {
     setView('table')
     refresh()
   }
 
-  const deleteDocument = async () => {
+  const deleteProfile = async () => {
     const target = pendingDelete
     setPendingDelete(null)
     try {
@@ -120,15 +120,15 @@ export default function App() {
 
         <div className="topbar-stats">
           <span>
-            Documents
-            <b>{stats?.documents ?? '—'}</b>
+            Profiles
+            <b>{stats?.profiles ?? '—'}</b>
           </span>
           <span>
-            Stored
-            <b>{formatBytes(stats?.totalBytes)}</b>
+            Inputs stored
+            <b>{formatBytes(stats?.inputBytes)}</b>
           </span>
           <span>
-            Last write
+            Last change
             <b>{stats?.lastUpdatedAt ? formatRelativeTime(stats.lastUpdatedAt) : '—'}</b>
           </span>
         </div>
@@ -141,7 +141,7 @@ export default function App() {
             ref={searchRef}
             className="input"
             value={query.search}
-            placeholder="Search names, tags, JSON…"
+            placeholder="Search names, tags, inputs…"
             onChange={(event) => {
               setView('table')
               update({ search: event.target.value })
@@ -150,19 +150,20 @@ export default function App() {
           <span className="kbd">⌘K</span>
         </div>
 
-        <button className="btn btn-primary" onClick={startNewDocument}>
-          <Icon.Plus /> New document
+        <button className="btn btn-primary" onClick={startNewProfile}>
+          <Icon.Plus /> New profile
         </button>
       </header>
 
       <div className="workspace">
         <Sidebar
           expanded={sidebarExpanded}
-          view={view}
+          // Editing an existing profile is not one of the destinations in the rail.
+          activeItem={view === 'editor' ? (selected ? '' : 'new') : view === 'compose' ? 'compose' : 'profiles'}
           theme={theme}
           user={user}
-          onShowDocuments={showDocuments}
-          onNewDocument={startNewDocument}
+          onShowProfiles={showProfiles}
+          onNewProfile={startNewProfile}
           onCompose={() => setView('compose')}
           onRefresh={refresh}
           onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -173,28 +174,28 @@ export default function App() {
         <main className="content">
           {view === 'compose' ? (
             <ComposeView
-              onBack={showDocuments}
+              onBack={showProfiles}
               onCreated={() => {
                 refresh()
                 setView('table')
               }}
             />
           ) : view === 'table' ? (
-            <DocumentTable
+            <ProfileTable
               query={query}
               onQueryChange={update}
               page={page}
               loading={loading}
               error={error}
               onRetry={refresh}
-              onOpen={openDocument}
+              onOpen={openProfile}
               onDelete={setPendingDelete}
             />
           ) : (
-            <DocumentEditor
+            <ProfileEditor
               key={editorKey}
               document={selected}
-              onBack={showDocuments}
+              onBack={showProfiles}
               onSaved={() => {
                 refresh()
                 setView('table')
@@ -210,10 +211,10 @@ export default function App() {
 
       {pendingDelete && (
         <ConfirmDialog
-          title="Delete document"
-          message={`“${pendingDelete.name}” will be removed from PostgreSQL. This cannot be undone.`}
+          title="Delete profile"
+          message={`The profile “${pendingDelete.name}” will be removed from PostgreSQL. This cannot be undone.`}
           confirmLabel="Delete"
-          onConfirm={deleteDocument}
+          onConfirm={deleteProfile}
           onCancel={() => setPendingDelete(null)}
         />
       )}

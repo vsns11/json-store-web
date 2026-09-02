@@ -10,14 +10,14 @@ export default function StatusBar({ parsed, shape, size, dirty, saving, isNew, o
 
       {parsed.ok && (
         <span className="status-metrics">
-          <span>{formatBytes(size)}</span>
+          <span title="Size once stored, with whitespace removed">{formatBytes(size)}</span>
           <span>{shape.keys} keys</span>
           <span>{shape.nodes} nodes</span>
           <span>depth {shape.depth}</span>
         </span>
       )}
 
-      {parsed.empty && <span className="muted">Type, paste, drop a .json file, or load a sample to get started</span>}
+      {parsed.empty && <span className="muted">Type the inputs, paste them, drop a .json file, or load a sample</span>}
 
       {!parsed.ok && !parsed.empty && (
         <button className="btn btn-sm btn-ghost status-error" onClick={onJumpToError} title="Jump to the problem">
