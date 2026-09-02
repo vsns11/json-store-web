@@ -147,10 +147,27 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
 
       {totalPages > 1 && (
         <footer className="table-footer">
-          <span className="muted">
-            Page {query.page + 1} of {totalPages}
-          </span>
+          {/* With thousands of pages, stepping one at a time is not navigation: the number is typeable. */}
+          <label className="table-jump">
+            Page
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={totalPages}
+              value={query.page + 1}
+              onChange={(event) => {
+                const page = Number(event.target.value) - 1
+                if (page >= 0 && page < totalPages) onQueryChange({ page })
+              }}
+            />
+            of {totalPages}
+          </label>
+
           <span className="table-pager">
+            <button className="btn btn-sm" disabled={query.page === 0} onClick={() => onQueryChange({ page: 0 })}>
+              ⇤ First
+            </button>
             <button className="btn btn-sm" disabled={query.page === 0} onClick={() => onQueryChange({ page: query.page - 1 })}>
               ← Previous
             </button>
@@ -160,6 +177,13 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
               onClick={() => onQueryChange({ page: query.page + 1 })}
             >
               Next →
+            </button>
+            <button
+              className="btn btn-sm"
+              disabled={query.page >= totalPages - 1}
+              onClick={() => onQueryChange({ page: totalPages - 1 })}
+            >
+              Last ⇥
             </button>
           </span>
         </footer>

@@ -24,7 +24,9 @@ chart/            Helm chart: Deployment, Service, Route or Ingress, HPA
 **Everything stored, in a table**
 
 The landing view lists every profile — name, description, tags, size, created and updated — with
-sortable columns, pagination and search. Editing starts from a row: **Edit** opens the profile, and
+sortable columns, pagination and search. It asks the API for one page at a time, so it renders the same
+~500 DOM nodes whether the store holds seven profiles or a hundred thousand; the page number is typeable
+for when there are thousands of them. Editing starts from a row: **Edit** opens the profile, and
 saving brings you back to the table. Profiles are created, updated and deleted from here.
 
 **Three ways to work on a profile, two of them always available**
