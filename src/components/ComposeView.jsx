@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client.js'
+import { loadCatalog } from '../lib/catalog.js'
 import { byteSize, formatBytes } from '../lib/json.js'
 import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
 import { useToasts } from '../hooks/useToasts.jsx'
@@ -27,8 +28,7 @@ export default function ComposeView({ onBack, onCreated }) {
   const [previewing, setPreviewing] = useState(false)
 
   useEffect(() => {
-    api
-      .templates()
+    loadCatalog()
       .then((loaded) => {
         setCatalog(loaded)
         const first = loaded.groups.find((group) => group.required)

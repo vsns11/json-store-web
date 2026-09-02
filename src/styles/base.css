@@ -534,3 +534,9 @@
   font-size: 12.5px;
   line-height: 1.5;
 }
+
+/* Same shape, but for something worth knowing rather than something to be careful about. */
+.notice-info {
+  background: var(--accent-soft);
+  color: var(--accent);
+}

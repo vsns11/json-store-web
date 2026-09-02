@@ -31,11 +31,17 @@ saving brings you back to the table. Profiles are created, updated and deleted f
 
 **Three ways to work on a profile, two of them always available**
 
-- **Form** — only for profiles composed from templates. Editing one opens on this tab, showing a card
-  per template it was built from, holding exactly the fields that template substitutes — the values
-  that were taken as input, and nothing else. The pickers are not repeated here: which templates were
-  used is settled, and each card is titled with its own. Changing a field rebuilds the inputs from
-  those templates; if they were edited by hand since, the form says so before you overwrite that work.
+- **Form** — for profiles that came from templates. Editing one opens on this tab, showing a card per
+  template it was built from, holding exactly the fields that template substitutes — the values that
+  were taken as input, and nothing else. The pickers are not repeated here: which templates were used
+  is settled, and each card is titled with its own. Changing a field rebuilds the inputs from those
+  templates; if they were edited by hand since, the form says so before you overwrite that work.
+
+  Profiles saved before the selection was recorded still get the form: their inputs are matched against
+  the catalogue — every literal a fragment writes has to be present and equal — and the values are read
+  back out of them. A field the catalogue gained later falls back to its default rather than failing the
+  match, and saving records what was matched. Inputs that match nothing, like a document written by
+  hand, get no form rather than a guess.
 
 - **Editor** — a syntax-coloured editor: keys, strings, numbers, booleans and punctuation are coloured
   as you type, with line numbers, `Tab` indentation, and live validation that reports the exact line and

@@ -10,7 +10,9 @@ import {
   sortJsonKeys,
 } from '../lib/json.js'
 import { downloadJson, readJsonFile } from '../lib/files.js'
+import { loadCatalog } from '../lib/catalog.js'
 import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
+import { inferTemplate } from '../lib/templateMatch.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { Icon } from './Icons.jsx'
@@ -41,18 +43,30 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   }))
   const [baseline, setBaseline] = useState(() => snapshot(draft))
   // A profile composed from templates remembers its selection, and can be edited as that form again.
+  // Older ones do not, so their selection is worked out from the inputs instead.
   const [template, setTemplate] = useState(saved?.template ?? null)
+  const [inferred, setInferred] = useState(false)
   const [catalog, setCatalog] = useState(null)
   const [view, setView] = useState(saved?.template ? 'form' : 'code')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [dragging, setDragging] = useState(false)
 
-  // The catalogue is only needed by the form, so it is fetched when there is one to draw.
   useEffect(() => {
-    if (!template || catalog) return
-    api.templates().then(setCatalog).catch((failure) => toasts.error(failure.message))
-  }, [template, catalog]) // eslint-disable-line react-hooks/exhaustive-deps
+    loadCatalog()
+      .then((loaded) => {
+        setCatalog(loaded)
+        if (saved && !saved.template) {
+          const match = inferTemplate(loaded, saved.payload)
+          if (match) {
+            setTemplate(match)
+            setInferred(true)
+            setView('form')
+          }
+        }
+      })
+      .catch((failure) => toasts.error(failure.message))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = useMemo(() => parseJson(draft.text), [draft.text])
   const shape = useMemo(() => (parsed.ok ? describeShape(parsed.value) : null), [parsed])
@@ -239,11 +253,19 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         {effectiveView === 'form' ? (
           catalog ? (
             <div className="compose-body">
-              {!matchesTemplate && (
-                <p className="notice">
-                  These inputs have been edited by hand since they were composed. Changing a field here
-                  rebuilds them from the templates, and those edits will be lost.
+              {inferred ? (
+                <p className="notice notice-info">
+                  This profile was saved before its templates were recorded, so the fields below were
+                  matched to the inputs. Changing one rebuilds the inputs from the templates — which may
+                  add fields the templates define — and saving records the match.
                 </p>
+              ) : (
+                !matchesTemplate && (
+                  <p className="notice">
+                    These inputs have been edited by hand since they were composed. Changing a field here
+                    rebuilds them from the templates, and those edits will be lost.
+                  </p>
+                )
               )}
               <TemplateForm
                 catalog={catalog}
