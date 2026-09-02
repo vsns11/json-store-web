@@ -11,6 +11,7 @@ import {
 } from '../lib/json.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import { Icon } from './Icons.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
 import FormEditor from './FormEditor.jsx'
 import JsonEditor from './JsonEditor.jsx'
@@ -24,7 +25,7 @@ const snapshot = (draft) => JSON.stringify(draft)
  * Edits one document. Mounted with a key of the document id, so switching
  * documents always starts from a clean draft.
  */
-export default function DocumentEditor({ document: saved, onSaved, onDeleted }) {
+export default function DocumentEditor({ document: saved, onSaved, onDeleted, onBack }) {
   const isNew = !saved
   const toasts = useToasts()
   const fileInputRef = useRef(null)
@@ -37,7 +38,8 @@ export default function DocumentEditor({ document: saved, onSaved, onDeleted }) 
     text: saved ? JSON.stringify(saved.payload, null, 2) : '',
   }))
   const [baseline, setBaseline] = useState(() => snapshot(draft))
-  const [view, setView] = useState('code')
+  // Form first: most edits are a field at a time, and the raw JSON is one click away.
+  const [view, setView] = useState('form')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -164,6 +166,9 @@ export default function DocumentEditor({ document: saved, onSaved, onDeleted }) 
     <section className="panel">
       <header className="editor-header">
         <div className="header-row">
+          <button className="btn btn-ghost back-button" onClick={onBack} title="Back to all documents">
+            <Icon.Back /> All documents
+          </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <input
               className="title-input"

@@ -81,6 +81,17 @@ export const Icon = {
       <path d="M4 10 8 6M4 10l4 4" />
     </svg>
   ),
+  Table: (props) => (
+    <svg {...base} {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M3 14h18M9 9v11" />
+    </svg>
+  ),
+  Back: (props) => (
+    <svg {...base} {...props}>
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+  ),
   Menu: (props) => (
     <svg {...base} {...props}>
       <path d="M4 7h16M4 12h16M4 17h16" />

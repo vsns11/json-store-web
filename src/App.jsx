@@ -1,24 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from './api/client.js'
+import ConfirmDialog from './components/ConfirmDialog.jsx'
 import DocumentEditor from './components/DocumentEditor.jsx'
-import DocumentList from './components/DocumentList.jsx'
-import Toasts from './components/Toasts.jsx'
+import DocumentTable from './components/DocumentTable.jsx'
 import { Icon } from './components/Icons.jsx'
-import MainMenu from './components/MainMenu.jsx'
 import ShortcutsDialog from './components/ShortcutsDialog.jsx'
+import Sidebar from './components/Sidebar.jsx'
+import Toasts from './components/Toasts.jsx'
 import { useDocuments } from './hooks/useDocuments.js'
 import { useToasts } from './hooks/useToasts.jsx'
 import { formatBytes, formatRelativeTime } from './lib/json.js'
 
 export default function App() {
-  const { error: showError } = useToasts()
+  const toasts = useToasts()
   const searchRef = useRef(null)
-  const { query, update, page, stats, loading, error, refresh } = useDocuments(showError)
+  const { query, update, page, stats, loading, error, refresh } = useDocuments(toasts.error)
 
-  const [selected, setSelected] = useState(null) // full document, or null for a new one
+  const [view, setView] = useState('table') // 'table' while browsing, 'editor' while editing one
+  const [selected, setSelected] = useState(null) // the open document, or null for a new one
   const [editorKey, setEditorKey] = useState('new')
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
+  const [pendingDelete, setPendingDelete] = useState(null)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => localStorage.getItem('sidebar') !== 'collapsed')
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -26,9 +30,14 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
+    localStorage.setItem('sidebar', sidebarExpanded ? 'expanded' : 'collapsed')
+  }, [sidebarExpanded])
+
+  useEffect(() => {
     const onKeyDown = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
+        setView('table')
         searchRef.current?.focus()
       }
     }
@@ -41,26 +50,47 @@ export default function App() {
       const document = await api.get(id)
       setSelected(document)
       setEditorKey(document.id)
+      setView('editor')
     } catch (failure) {
-      showError(failure.message)
+      toasts.error(failure.message)
     }
   }
 
   const startNewDocument = () => {
     setSelected(null)
     setEditorKey(`new-${Date.now()}`)
+    setView('editor')
+  }
+
+  const showDocuments = () => {
+    setView('table')
+    refresh()
+  }
+
+  const deleteDocument = async () => {
+    const target = pendingDelete
+    setPendingDelete(null)
+    try {
+      await api.remove(target.id)
+      toasts.success(`Deleted “${target.name}”`)
+      if (selected?.id === target.id) setSelected(null)
+      refresh()
+    } catch (failure) {
+      toasts.error(failure.message)
+    }
   }
 
   return (
     <div className="app">
       <header className="topbar">
-        <MainMenu
-          theme={theme}
-          onNewDocument={startNewDocument}
-          onRefresh={refresh}
-          onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          onShowShortcuts={() => setShowShortcuts(true)}
-        />
+        <button
+          className="btn btn-ghost menu-trigger"
+          onClick={() => setSidebarExpanded(!sidebarExpanded)}
+          aria-expanded={sidebarExpanded}
+          aria-label={sidebarExpanded ? 'Collapse menu' : 'Expand menu'}
+        >
+          <Icon.Menu />
+        </button>
 
         <div className="brand">
           <span className="brand-mark">{'{}'}</span>
@@ -91,46 +121,70 @@ export default function App() {
             className="input"
             value={query.search}
             placeholder="Search names, tags, JSON…"
-            onChange={(event) => update({ search: event.target.value })}
+            onChange={(event) => {
+              setView('table')
+              update({ search: event.target.value })
+            }}
           />
           <span className="kbd">⌘K</span>
         </div>
-
-        <button className="btn btn-ghost" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle theme">
-          {theme === 'dark' ? <Icon.Sun /> : <Icon.Moon />}
-        </button>
 
         <button className="btn btn-primary" onClick={startNewDocument}>
           <Icon.Plus /> New document
         </button>
       </header>
 
-      <main className="workspace">
-        <DocumentList
-          query={query}
-          onQueryChange={update}
-          page={page}
-          loading={loading}
-          error={error}
-          onRetry={refresh}
-          selectedId={selected?.id}
-          onSelect={openDocument}
+      <div className="workspace">
+        <Sidebar
+          expanded={sidebarExpanded}
+          view={view}
+          theme={theme}
+          onShowDocuments={showDocuments}
+          onNewDocument={startNewDocument}
+          onRefresh={refresh}
+          onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onShowShortcuts={() => setShowShortcuts(true)}
         />
 
-        <DocumentEditor
-          key={editorKey}
-          document={selected}
-          onSaved={(saved) => {
-            setSelected(saved)
-            setEditorKey(saved.id)
-            refresh()
-          }}
-          onDeleted={() => {
-            startNewDocument()
-            refresh()
-          }}
+        <main className="content">
+          {view === 'table' ? (
+            <DocumentTable
+              query={query}
+              onQueryChange={update}
+              page={page}
+              loading={loading}
+              error={error}
+              onRetry={refresh}
+              onOpen={openDocument}
+              onDelete={setPendingDelete}
+            />
+          ) : (
+            <DocumentEditor
+              key={editorKey}
+              document={selected}
+              onBack={showDocuments}
+              onSaved={() => {
+                refresh()
+                setView('table')
+              }}
+              onDeleted={() => {
+                refresh()
+                setView('table')
+              }}
+            />
+          )}
+        </main>
+      </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete document"
+          message={`“${pendingDelete.name}” will be removed from PostgreSQL. This cannot be undone.`}
+          confirmLabel="Delete"
+          onConfirm={deleteDocument}
+          onCancel={() => setPendingDelete(null)}
         />
-      </main>
+      )}
 
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
 

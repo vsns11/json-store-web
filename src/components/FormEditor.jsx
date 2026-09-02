@@ -1,234 +1,394 @@
-import { useEffect, useRef, useState } from 'react'
-import { flattenPaths, formatPath, parsePath, setAtPath } from '../lib/jsonPath.js'
+import { useEffect, useState } from 'react'
+import { deleteAtPath, formatPath, setAtPath } from '../lib/jsonPath.js'
 import { Icon } from './Icons.jsx'
 
-const TYPES = ['string', 'number', 'boolean', 'null', 'json']
-
-let nextRowId = 0
+const TYPES = ['string', 'number', 'boolean', 'null', 'object', 'array']
 
 const isContainer = (value) => value !== null && typeof value === 'object'
 
-/** Describes a leaf value as the row that edits it. */
-function toRow(path, value) {
-  if (typeof value === 'string') return { id: ++nextRowId, path, type: 'string', draft: value }
-  if (typeof value === 'number') return { id: ++nextRowId, path, type: 'number', draft: String(value) }
-  if (typeof value === 'boolean') return { id: ++nextRowId, path, type: 'boolean', draft: String(value) }
-  if (value === null) return { id: ++nextRowId, path, type: 'null', draft: '' }
-  return { id: ++nextRowId, path, type: 'json', draft: JSON.stringify(value, null, 2) }
+function typeOf(value) {
+  if (Array.isArray(value)) return 'array'
+  if (value === null) return 'null'
+  if (typeof value === 'object') return 'object'
+  return typeof value
 }
 
-/** Rows for a document, or null when its root is a single value the form cannot lay out. */
-function toRows(text, isEmpty) {
-  if (isEmpty) return []
-  try {
-    const root = JSON.parse(text)
-    if (!isContainer(root)) return null
-    return flattenPaths(root).map((leaf) => toRow(leaf.path, leaf.value))
-  } catch {
-    return null
-  }
-}
-
-function pathError(row) {
-  if (!row.path.trim()) return 'Enter a path'
-  try {
-    parsePath(row.path)
-    return null
-  } catch (error) {
-    return error.message
-  }
-}
-
-function valueError(row) {
-  if (row.type === 'number' && (row.draft.trim() === '' || Number.isNaN(Number(row.draft)))) {
-    return 'Not a number'
-  }
-  if (row.type === 'json') {
-    try {
-      JSON.parse(row.draft)
-    } catch {
-      return 'Not valid JSON'
-    }
-  }
-  return null
-}
-
-function rowValue(row) {
-  switch (row.type) {
+function emptyValue(type) {
+  switch (type) {
     case 'number':
-      return Number(row.draft)
+      return 0
     case 'boolean':
-      return row.draft === 'true'
+      return false
     case 'null':
       return null
-    case 'json':
-      return JSON.parse(row.draft)
+    case 'object':
+      return {}
+    case 'array':
+      return []
     default:
-      return row.draft
+      return ''
   }
+}
+
+/** Converts a value to another type, keeping what carries over. */
+function convert(value, type) {
+  switch (type) {
+    case 'string':
+      return isContainer(value) ? '' : String(value ?? '')
+    case 'number':
+      return Number.isFinite(Number(value)) ? Number(value) : 0
+    case 'boolean':
+      return Boolean(value) && value !== 'false'
+    default:
+      return emptyValue(type)
+  }
+}
+
+/** A blank copy of a value: same shape, emptied out — used when adding a row to a list. */
+function blankLike(value) {
+  if (Array.isArray(value)) return []
+  if (isContainer(value)) {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, blankLike(item)]))
+  }
+  return emptyValue(typeOf(value))
+}
+
+function uniqueKey(object, base = 'newField') {
+  if (!(base in object)) return base
+  let index = 2
+  while (`${base}${index}` in object) index += 1
+  return `${base}${index}`
 }
 
 /**
- * Edits a document one JSON path at a time: every leaf of the template is a row, and a new row
- * writes its value into the path it names, creating whatever nesting that path implies.
+ * Edits a document as a form: objects become sections, arrays become numbered lists, and
+ * every value gets a labelled input. Nothing here needs the reader to write JSON.
  */
 export default function FormEditor({ text, isEmpty, onChange }) {
-  const [rows, setRows] = useState(() => toRows(text, isEmpty))
-  const lastEmitted = useRef(text)
+  const root = isEmpty ? {} : safeParse(text)
 
-  // Re-read the rows when the JSON changed elsewhere (formatting, revert, another document).
-  useEffect(() => {
-    if (text !== lastEmitted.current) {
-      setRows(toRows(text, isEmpty))
-      lastEmitted.current = text
-    }
-  }, [text, isEmpty])
-
-  if (rows === null) {
+  if (root === undefined || !isContainer(root)) {
     return (
       <div className="empty">
         <div>
           <h2>This payload is a single value</h2>
-          <p>
-            The form edits documents built from objects and arrays. A bare string, number or boolean can
-            still be edited on the Editor tab.
-          </p>
+          <p>The form edits documents built from objects and lists. Use the Editor tab for a bare value.</p>
         </div>
       </div>
     )
   }
 
-  /** Rebuilds the whole document from the rows, so a renamed path just moves its value. */
-  const commit = (nextRows) => {
-    setRows(nextRows)
-
-    const usable = nextRows.filter((row) => !pathError(row) && !valueError(row))
-    const firstToken = usable.length ? parsePath(usable[0].path)[0] : null
-    let root = typeof firstToken === 'number' ? [] : {}
-    for (const row of usable) {
-      root = setAtPath(root, parsePath(row.path), rowValue(row))
-    }
-
-    const serialized = JSON.stringify(root, null, 2)
-    lastEmitted.current = serialized
-    onChange(serialized)
-  }
-
-  const updateRow = (id, changes) =>
-    commit(
-      rows.map((row) => {
-        if (row.id !== id) return row
-        const next = { ...row, ...changes }
-        // Switching type keeps whatever still makes sense and resets what does not.
-        if (changes.type && changes.type !== row.type) {
-          if (changes.type === 'boolean') next.draft = row.draft === 'true' ? 'true' : 'false'
-          else if (changes.type === 'null') next.draft = ''
-          else if (changes.type === 'json') next.draft = row.draft.trim().startsWith('{') ? row.draft : '{}'
-          else if (changes.type === 'number') next.draft = Number.isNaN(Number(row.draft)) ? '0' : row.draft
-        }
-        return next
-      }),
-    )
-
-  const addRow = () => {
-    // Suggest the next sibling of the last row, so filling in a template is mostly typing values.
-    const previous = rows.at(-1)
-    let suggestion = ''
-    if (previous && !pathError(previous)) {
-      const tokens = parsePath(previous.path)
-      suggestion = typeof tokens.at(-1) === 'number' ? formatPath([...tokens.slice(0, -1), tokens.at(-1) + 1]) : ''
-    }
-    commit([...rows, { id: ++nextRowId, path: suggestion, type: 'string', draft: '' }])
-  }
-
-  const duplicates = new Set(
-    rows.map((row) => row.path.trim()).filter((path, index, all) => path && all.indexOf(path) !== index),
-  )
+  const apply = (next) => onChange(JSON.stringify(next, null, 2))
 
   return (
     <div className="form-editor">
-      <div className="form-grid form-head">
-        <span>JSON path</span>
-        <span>Type</span>
-        <span>Value</span>
-        <span />
-      </div>
+      <FormNode
+        value={root}
+        tokens={[]}
+        label={null}
+        onSet={(tokens, value) => apply(setAtPath(root, tokens, value))}
+        onRemove={(tokens) => apply(deleteAtPath(root, tokens))}
+        onRenameKey={(parentTokens, from, to) => {
+          const parent = parentTokens.length === 0 ? root : getIn(root, parentTokens)
+          const renamed = Object.fromEntries(
+            Object.entries(parent).map(([key, item]) => [key === from ? to : key, item]),
+          )
+          apply(parentTokens.length === 0 ? renamed : setAtPath(root, parentTokens, renamed))
+        }}
+      />
+    </div>
+  )
+}
 
-      {rows.length === 0 && (
-        <p className="muted form-hint">
-          Empty template. Add a path such as <code>owner.email</code> or <code>items[0].sku</code> and the
-          objects and arrays around it are created for you.
-        </p>
+function safeParse(text) {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
+
+function getIn(root, tokens) {
+  return tokens.reduce((current, token) => current?.[token], root)
+}
+
+/** One node of the document: an object section, a list section, or a single field. */
+function FormNode({ value, tokens, label, siblings, onSet, onRemove, onRenameKey, index }) {
+  if (Array.isArray(value)) {
+    return (
+      <ListSection
+        value={value}
+        tokens={tokens}
+        label={label}
+        siblings={siblings}
+        onSet={onSet}
+        onRemove={onRemove}
+        onRenameKey={onRenameKey}
+        index={index}
+      />
+    )
+  }
+  if (isContainer(value)) {
+    return (
+      <ObjectSection
+        value={value}
+        tokens={tokens}
+        label={label}
+        siblings={siblings}
+        onSet={onSet}
+        onRemove={onRemove}
+        onRenameKey={onRenameKey}
+        index={index}
+      />
+    )
+  }
+  return (
+    <Field
+      value={value}
+      tokens={tokens}
+      label={label}
+      siblings={siblings}
+      onSet={onSet}
+      onRemove={onRemove}
+      onRenameKey={onRenameKey}
+      index={index}
+    />
+  )
+}
+
+function ObjectSection({ value, tokens, label, siblings, onSet, onRemove, onRenameKey, index }) {
+  const entries = Object.entries(value)
+  const isRoot = tokens.length === 0
+
+  return (
+    <section className={isRoot ? 'form-root' : 'form-section'}>
+      {!isRoot && (
+        <SectionHeader
+          label={label}
+          index={index}
+          tokens={tokens}
+          siblings={siblings}
+          type="object"
+          count={`${entries.length} field${entries.length === 1 ? '' : 's'}`}
+          onSet={onSet}
+          onRemove={onRemove}
+          onRenameKey={onRenameKey}
+        />
       )}
 
-      {rows.map((row) => {
-        const badPath = pathError(row)
-        const badValue = valueError(row)
-        const duplicate = duplicates.has(row.path.trim())
-        return (
-          <div className="form-grid form-row" key={row.id}>
-            <div className="form-value">
-              <input
-                className={`input mono${badPath || duplicate ? ' is-invalid' : ''}`}
-                value={row.path}
-                placeholder="owner.email"
-                spellCheck="false"
-                onChange={(event) => updateRow(row.id, { path: event.target.value })}
-              />
-              {badPath && <span className="form-error">{badPath}</span>}
-              {!badPath && duplicate && <span className="form-error">Duplicate path — the last one wins</span>}
-            </div>
+      <div className={isRoot ? undefined : 'form-children'}>
+        {entries.length === 0 && <p className="form-hint muted">No fields yet.</p>}
 
-            <select className="input" value={row.type} onChange={(event) => updateRow(row.id, { type: event.target.value })}>
-              {TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+        {entries.map(([key, item], position) => (
+          <FormNode
+            key={position}
+            value={item}
+            label={key}
+            siblings={entries.map(([name]) => name)}
+            tokens={[...tokens, key]}
+            onSet={onSet}
+            onRemove={onRemove}
+            onRenameKey={onRenameKey}
+          />
+        ))}
 
-            <div className="form-value">
-              {row.type === 'boolean' ? (
-                <select className="input" value={row.draft} onChange={(event) => updateRow(row.id, { draft: event.target.value })}>
-                  <option value="true">true</option>
-                  <option value="false">false</option>
-                </select>
-              ) : row.type === 'null' ? (
-                <input className="input" value="null" disabled />
-              ) : row.type === 'json' ? (
-                <textarea
-                  className={`input mono${badValue ? ' is-invalid' : ''}`}
-                  rows={Math.min(8, row.draft.split('\n').length)}
-                  value={row.draft}
-                  spellCheck="false"
-                  onChange={(event) => updateRow(row.id, { draft: event.target.value })}
-                />
-              ) : (
-                <input
-                  className={`input${badValue ? ' is-invalid' : ''}`}
-                  value={row.draft}
-                  inputMode={row.type === 'number' ? 'decimal' : undefined}
-                  placeholder={row.type === 'number' ? '0' : 'value'}
-                  onChange={(event) => updateRow(row.id, { draft: event.target.value })}
-                />
-              )}
-              {badValue && <span className="form-error">{badValue}</span>}
-            </div>
+        <button
+          className="btn btn-sm form-add"
+          onClick={() => onSet([...tokens, uniqueKey(value)], '')}
+        >
+          <Icon.Plus /> Add field
+        </button>
+      </div>
+    </section>
+  )
+}
 
-            <button
-              className="btn btn-sm btn-danger"
-              title="Remove this path"
-              onClick={() => commit(rows.filter((item) => item.id !== row.id))}
-            >
-              <Icon.Trash />
-            </button>
-          </div>
-        )
-      })}
+function ListSection({ value, tokens, label, siblings, onSet, onRemove, onRenameKey, index }) {
+  return (
+    <section className="form-section">
+      <SectionHeader
+        label={label}
+        index={index}
+        tokens={tokens}
+        siblings={siblings}
+        type="array"
+        count={`${value.length} item${value.length === 1 ? '' : 's'}`}
+        onSet={onSet}
+        onRemove={onRemove}
+        onRenameKey={onRenameKey}
+      />
 
-      <button className="btn btn-sm form-add" onClick={addRow}>
-        <Icon.Plus /> Add path
+      <div className="form-children">
+        {value.length === 0 && <p className="form-hint muted">No items yet.</p>}
+
+        {value.map((item, position) => (
+          <FormNode
+            key={position}
+            value={item}
+            label={null}
+            index={position}
+            tokens={[...tokens, position]}
+            onSet={onSet}
+            onRemove={onRemove}
+            onRenameKey={onRenameKey}
+          />
+        ))}
+
+        <button
+          className="btn btn-sm form-add"
+          // A new row copies the shape of the last one, so lists of objects stay consistent.
+          onClick={() => onSet([...tokens, value.length], value.length ? blankLike(value.at(-1)) : '')}
+        >
+          <Icon.Plus /> Add item
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function SectionHeader({ label, index, tokens, siblings, type, count, onSet, onRemove, onRenameKey }) {
+  return (
+    <header className="form-section-head" title={formatPath(tokens)}>
+      {label === null ? (
+        <span className="form-index">Item {index + 1}</span>
+      ) : (
+        <KeyLabel label={label} tokens={tokens} siblings={siblings} onRenameKey={onRenameKey} />
+      )}
+      <TypeSelect
+        type={type}
+        onChange={(next) => onSet(tokens, emptyValue(next))}
+      />
+      <span className="form-count">{count}</span>
+      <button className="btn btn-sm btn-danger form-remove" title="Remove" onClick={() => onRemove(tokens)}>
+        <Icon.Trash />
+      </button>
+    </header>
+  )
+}
+
+function Field({ value, tokens, label, siblings, index, onSet, onRemove, onRenameKey }) {
+  const type = typeOf(value)
+
+  return (
+    <div className="form-field" title={formatPath(tokens)}>
+      {label === null ? (
+        <span className="form-index">Item {index + 1}</span>
+      ) : (
+        <KeyLabel label={label} tokens={tokens} siblings={siblings} onRenameKey={onRenameKey} />
+      )}
+
+      <TypeSelect
+        type={type}
+        onChange={(next) => onSet(tokens, next === type ? value : convert(value, next))}
+      />
+
+      <ValueControl type={type} value={value} onChange={(next) => onSet(tokens, next)} />
+
+      <button className="btn btn-sm btn-danger form-remove" title="Remove" onClick={() => onRemove(tokens)}>
+        <Icon.Trash />
       </button>
     </div>
+  )
+}
+
+/**
+ * The field name, edited in place. Each keystroke that yields a usable name is applied at once,
+ * so what the form shows is always what the document holds; a name that cannot be applied yet
+ * (empty, or already taken by a sibling) is kept as a draft and explained underneath.
+ */
+function KeyLabel({ label, tokens, siblings = [], onRenameKey }) {
+  const [draft, setDraft] = useState(label)
+
+  useEffect(() => setDraft(label), [label])
+
+  const trimmed = draft.trim()
+  const taken = trimmed !== label && siblings.includes(trimmed)
+  const problem = !trimmed ? 'A field needs a name' : taken ? 'That name is already used here' : null
+
+  const change = (next) => {
+    setDraft(next)
+    const name = next.trim()
+    if (!name || name === label || siblings.includes(name)) return
+    onRenameKey(tokens.slice(0, -1), label, name)
+  }
+
+  return (
+    <span className="form-key-cell">
+      <input
+        className={`form-key${problem ? ' is-invalid' : ''}`}
+        value={draft}
+        spellCheck="false"
+        aria-label="Field name"
+        onChange={(event) => change(event.target.value)}
+        // Nothing is pending on blur, so an unusable draft simply reverts.
+        onBlur={() => setDraft(label)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' || event.key === 'Enter') event.target.blur()
+        }}
+      />
+      {problem && <span className="form-error">{problem}</span>}
+    </span>
+  )
+}
+
+function TypeSelect({ type, onChange }) {
+  return (
+    <select className="form-type" value={type} onChange={(event) => onChange(event.target.value)} aria-label="Type">
+      {TYPES.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function ValueControl({ type, value, onChange }) {
+  // Numbers need a draft: "1." and "-" are worth typing but are not numbers yet.
+  const [draft, setDraft] = useState(String(value ?? ''))
+
+  useEffect(() => {
+    if (type === 'number' && Number(draft) !== value) setDraft(String(value))
+  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (type === 'boolean') {
+    return (
+      <select className="input form-value-input" value={String(value)} onChange={(event) => onChange(event.target.value === 'true')}>
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+    )
+  }
+
+  if (type === 'null') {
+    return <input className="input form-value-input" value="null" disabled />
+  }
+
+  if (type === 'number') {
+    const invalid = draft.trim() === '' || Number.isNaN(Number(draft))
+    return (
+      <div className="form-value-input">
+        <input
+          className={`input${invalid ? ' is-invalid' : ''}`}
+          value={draft}
+          inputMode="decimal"
+          onChange={(event) => {
+            setDraft(event.target.value)
+            const parsed = Number(event.target.value)
+            if (event.target.value.trim() !== '' && !Number.isNaN(parsed)) onChange(parsed)
+          }}
+        />
+        {invalid && <span className="form-error">Not a number</span>}
+      </div>
+    )
+  }
+
+  return (
+    <input
+      className="input form-value-input"
+      value={value}
+      placeholder="value"
+      onChange={(event) => onChange(event.target.value)}
+    />
   )
 }
