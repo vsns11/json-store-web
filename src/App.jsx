@@ -4,15 +4,14 @@ import ComposeView from './components/ComposeView.jsx'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
 import ProfileEditor from './components/ProfileEditor.jsx'
 import ProfileTable from './components/ProfileTable.jsx'
-import { Icon } from './components/Icons.jsx'
 import LoginScreen from './components/LoginScreen.jsx'
 import ShortcutsDialog from './components/ShortcutsDialog.jsx'
+import TopBar from './components/TopBar.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Toasts from './components/Toasts.jsx'
 import { useAuth } from './hooks/useAuth.jsx'
 import { useProfiles } from './hooks/useProfiles.js'
 import { useToasts } from './hooks/useToasts.jsx'
-import { formatBytes, formatRelativeTime } from './lib/json.js'
 
 export default function App() {
   const { user, status, signIn, signOut } = useAuth()
@@ -103,57 +102,18 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <button
-          className="btn btn-ghost menu-trigger"
-          onClick={() => setSidebarExpanded(!sidebarExpanded)}
-          aria-expanded={sidebarExpanded}
-          aria-label={sidebarExpanded ? 'Collapse menu' : 'Expand menu'}
-        >
-          <Icon.Menu />
-        </button>
-
-        <div className="brand">
-          <span className="brand-mark">{'{}'}</span>
-          <span>JSON Store</span>
-        </div>
-
-        <div className="topbar-stats">
-          <span>
-            Profiles
-            <b>{stats?.profiles ?? '—'}</b>
-          </span>
-          <span>
-            Inputs stored
-            <b>{formatBytes(stats?.inputBytes)}</b>
-          </span>
-          <span>
-            Last change
-            <b>{stats?.lastUpdatedAt ? formatRelativeTime(stats.lastUpdatedAt) : '—'}</b>
-          </span>
-        </div>
-
-        <span className="topbar-spacer" />
-
-        <div className="search">
-          <Icon.Search className="search-icon" />
-          <input
-            ref={searchRef}
-            className="input"
-            value={query.search}
-            placeholder="Search names, tags, inputs…"
-            onChange={(event) => {
-              setView('table')
-              update({ search: event.target.value })
-            }}
-          />
-          <span className="kbd">⌘K</span>
-        </div>
-
-        <button className="btn btn-primary" onClick={startNewProfile}>
-          <Icon.Plus /> New profile
-        </button>
-      </header>
+      <TopBar
+        stats={stats}
+        search={query.search}
+        searchRef={searchRef}
+        menuExpanded={sidebarExpanded}
+        onToggleMenu={() => setSidebarExpanded(!sidebarExpanded)}
+        onSearch={(value) => {
+          setView('table')
+          update({ search: value })
+        }}
+        onNewProfile={startNewProfile}
+      />
 
       <div className="workspace">
         <Sidebar

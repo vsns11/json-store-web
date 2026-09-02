@@ -1,0 +1,20 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "json-store-web.fullname" . }}
+  labels: {{- include "json-store-web.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.route.host }}
+  host: {{ . }}
+  {{- end }}
+  path: /
+  to:
+    kind: Service
+    name: {{ include "json-store-web.fullname" . }}
+  port:
+    targetPort: http
+  tls:
+    termination: {{ .Values.route.tls.termination }}
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

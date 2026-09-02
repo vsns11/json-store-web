@@ -1,0 +1,51 @@
+# Everything the chart can be told. Only `image.repository` and `config.API_BASE_URL`
+# normally need changing.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/your-org/json-store-web
+  tag: ""              # defaults to the chart's appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  port: 8080
+
+config:
+  # Where the browser reaches the API. Leave empty when the Route or Ingress below
+  # sends /api to the API service on this same host — then there is no CORS at all.
+  API_BASE_URL: ""
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# OpenShift Route. Use `ingress` instead on plain Kubernetes.
+route:
+  enabled: false
+  host: ""
+  tls:
+    termination: edge
+
+ingress:
+  enabled: false
+  className: nginx
+  host: ""
+  tls:
+    enabled: true
+    secretName: json-store-tls
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

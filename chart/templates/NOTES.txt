@@ -1,0 +1,19 @@
+{{ .Chart.Name }} {{ .Chart.AppVersion }} installed as {{ .Release.Name }}.
+
+Check it came up:
+  kubectl rollout status deployment/{{ include "json-store-web.fullname" . }} -n {{ .Release.Namespace }}
+
+{{ if or .Values.route.enabled .Values.ingress.enabled -}}
+Open https://{{ .Values.route.host | default .Values.ingress.host }}
+{{- else -}}
+No Route or Ingress is enabled, so nothing is reachable from outside yet. Have a look with:
+  kubectl port-forward svc/{{ include "json-store-web.fullname" . }} 8080:{{ .Values.service.port }} -n {{ .Release.Namespace }}
+{{- end }}
+
+{{ if .Values.config.API_BASE_URL -}}
+The browser will call the API at {{ .Values.config.API_BASE_URL }} — that origin must be listed in
+CORS_ORIGINS on the API.
+{{- else -}}
+API_BASE_URL is empty, so the browser calls /api on this same host. Point that path at the API
+service in your Route or Ingress.
+{{- end }}

@@ -9,6 +9,7 @@ import {
   parseJson,
   sortJsonKeys,
 } from '../lib/json.js'
+import { downloadJson, readJsonFile } from '../lib/files.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { Icon } from './Icons.jsx'
@@ -109,26 +110,13 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
     }
   }
 
-  const download = () => {
-    const blob = new Blob([draft.text], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = window.document.createElement('a')
-    link.href = url
-    link.download = `${(draft.name.trim() || 'document').replace(/[^\w.-]+/g, '-').toLowerCase()}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const readFile = async (file) => {
+  const loadFile = async (file) => {
     if (!file) return
-    const text = await file.text()
-    const result = formatJson(text)
-    patch({
-      text: result.ok ? result.text : text,
-      name: draft.name || file.name.replace(/\.json$/i, ''),
-    })
-    toasts[result.ok ? 'info' : 'error'](
-      result.ok ? `Loaded ${file.name}` : `Loaded ${file.name}, but it is not valid JSON`,
+    const { name, text } = await readJsonFile(file)
+    const formatted = formatJson(text)
+    patch({ text: formatted.ok ? formatted.text : text, name: draft.name || name })
+    toasts[formatted.ok ? 'info' : 'error'](
+      formatted.ok ? `Loaded ${file.name}` : `Loaded ${file.name}, but it is not valid JSON`,
     )
   }
 
@@ -194,7 +182,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         onMinify={() => transform(minifyJson)}
         onSortKeys={() => transform(sortJsonKeys)}
         onCopy={copy}
-        onDownload={download}
+        onDownload={() => downloadJson(draft.name, draft.text)}
         onUpload={() => fileInputRef.current?.click()}
         onSample={() => patch({ text: SAMPLE_PROFILE })}
       />
@@ -209,7 +197,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         onDrop={(event) => {
           event.preventDefault()
           setDragging(false)
-          readFile(event.dataTransfer.files[0])
+          loadFile(event.dataTransfer.files[0])
         }}
       >
         {effectiveView === 'tree' ? (
@@ -248,7 +236,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         accept="application/json,.json"
         hidden
         onChange={(event) => {
-          readFile(event.target.files[0])
+          loadFile(event.target.files[0])
           event.target.value = ''
         }}
       />

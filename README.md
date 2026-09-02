@@ -16,7 +16,7 @@ src/
 ├── api/          the HTTP client
 └── config.js     runtime configuration read from the container
 nginx/            config templates rendered at container start
-openshift/        Deployment, Service, Route, HPA, BuildConfig
+chart/            Helm chart: Deployment, Service, Route or Ingress, HPA
 ```
 
 ## Features
@@ -192,27 +192,51 @@ Data access is confined to `src/api/client.js`; the three hooks in `src/hooks/` 
 list and toasts. A component never calls `fetch` itself, so pointing the app at a different API, or
 changing how errors surface, is a one-file change.
 
-## Deploying to OpenShift
+## Deploying with Helm
+
+The chart in `chart/` deploys the bundle to OpenShift or plain Kubernetes. Images come from your CI;
+the chart only deploys them.
+
+```bash
+helm upgrade --install json-store-web ./chart \
+  --namespace json-store \
+  --set image.repository=registry.example.com/json-store-web \
+  --set image.tag=1.0.0 \
+  --set route.enabled=true --set route.host=json-store.apps.example.com
+```
+
+`config.API_BASE_URL` decides where the browser sends its requests, and it is read when the container
+starts, so the same image works in every environment:
+
+- **Left empty** — the browser calls `/api` on the same host. Add a second Route or Ingress rule
+  sending `/api` to the API's Service. No CORS, one certificate; this is the recommended setup.
+- **Set to the API's own URL** — the browser calls it directly, and that URL must also be listed in
+  `CORS_ORIGINS` on the API.
+
+Changing it rolls the pods automatically: the Deployment carries a checksum of the ConfigMap.
+
+See what a release will contain before applying it:
+
+```bash
+helm template json-store-web ./chart --set route.enabled=true --set route.host=… | less
+```
 
 The image is `nginx-unprivileged`: it listens on 8080, needs no root, and its writable paths belong to
 GID 0, so OpenShift's arbitrary UID works under the `restricted-v2` SCC without an `anyuid` exception.
 
+## Building the image
+
 ```bash
-oc project json-store
-
-# Either let OpenShift build the image from git…
-oc apply -f openshift/build.yaml
-oc start-build json-store-web --follow
-
-# …or push your own image and skip build.yaml.
-
-oc apply -f openshift/deployment.yaml
-oc apply -f openshift/route.yaml
+docker build -t json-store-web:1.0.0 .
 ```
 
-`openshift/route.yaml` creates two Routes on one hostname: `/` to this app and `/api` to the API's
-Service (which the other repo creates). Longest path wins in the OpenShift router, so the API is matched
-first. That keeps everything same-origin: no CORS preflights, one certificate.
+Both base images are build arguments, so internal ones can be used instead:
 
-To run the two on separate hostnames instead, delete the second Route, set `API_BASE_URL` on this
-Deployment to the API's URL, and add this app's URL to `CORS_ORIGINS` on the API.
+```bash
+docker build -t json-store-web:1.0.0 \
+  --build-arg BUILD_IMAGE=registry.example.com/node:22 \
+  --build-arg RUNTIME_IMAGE=registry.example.com/nginx-unprivileged:1.27 .
+```
+
+For static hosting without a container (S3, Pages, Netlify, Vercel), skip the image altogether: set
+`VITE_API_BASE_URL` at build time and upload `dist/`.

@@ -5,42 +5,10 @@ import { composeDocument, defaultValues, fieldCards, fieldsFor, missingFields } 
 import { useToasts } from '../hooks/useToasts.jsx'
 import FormField from './FormField.jsx'
 import { Icon } from './Icons.jsx'
-import JsonTree from './JsonTree.jsx'
+import PreviewDialog from './PreviewDialog.jsx'
 import TagEditor from './TagEditor.jsx'
 
 const NONE = ''
-
-/** The composed profile, shown on demand rather than taking up half the screen. */
-function PreviewDialog({ composed, size, onClose }) {
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
-  return (
-    <div className="overlay" onClick={onClose}>
-      <div className="dialog dialog-wide" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-        <header className="dialog-head">
-          <h3>Composed profile</h3>
-          <span className="muted">{formatBytes(size)}</span>
-        </header>
-
-        <div className="dialog-body">
-          <JsonTree value={composed} />
-        </div>
-
-        <div className="dialog-actions">
-          <button className="btn btn-primary" onClick={onClose} autoFocus>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 /**
  * Builds one large document out of the small templates in the catalogue: pick a fragment per
