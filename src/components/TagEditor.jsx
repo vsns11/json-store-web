@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { tintClass } from '../lib/palette.js'
 
 export default function TagEditor({ tags, onChange }) {
   const [draft, setDraft] = useState('')
@@ -12,7 +13,7 @@ export default function TagEditor({ tags, onChange }) {
   return (
     <div className="tag-editor">
       {tags.map((tag) => (
-        <span key={tag} className="tag-chip">
+        <span key={tag} className={`tag-chip ${tintClass(tag)}`}>
           {tag}
           <button type="button" onClick={() => onChange(tags.filter((item) => item !== tag))} aria-label={`Remove ${tag}`}>
             ×

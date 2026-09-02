@@ -1,5 +1,7 @@
 import { formatBytes, formatRelativeTime } from '../lib/json.js'
+import { initialsFor, tintClass } from '../lib/palette.js'
 import { Icon } from './Icons.jsx'
+import JsonSnippet from './JsonSnippet.jsx'
 
 const COLUMNS = [
   { key: 'name', label: 'Name', sortable: true },
@@ -12,6 +14,8 @@ const COLUMNS = [
 /** Every stored profile at a glance. Editing starts from a row. */
 export default function ProfileTable({ query, onQueryChange, page, loading, error, onRetry, onOpen, onDelete }) {
   const { items, totalItems, totalPages } = page
+  // The size bar is relative to the largest profile on this page, so it always says something.
+  const largest = Math.max(1, ...items.map((item) => item.sizeBytes))
 
   const sortBy = (column) => {
     if (!column.sortable) return
@@ -90,20 +94,38 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
                 <tr key={item.id} onClick={() => onOpen(item.id)} tabIndex={0}
                     onKeyDown={(event) => event.key === 'Enter' && onOpen(item.id)}>
                   <td>
-                    <span className="cell-name">{item.name}</span>
-                    <span className="cell-sub">{item.description || item.preview}</span>
+                    <span className="cell-title">
+                      <span className={`monogram ${tintClass(item.name)}`} aria-hidden="true">
+                        {initialsFor(item.name)}
+                      </span>
+                      <span className="cell-text">
+                        <span className="cell-name">{item.name}</span>
+                        {item.description ? (
+                          <span className="cell-sub">{item.description}</span>
+                        ) : (
+                          <JsonSnippet className="cell-sub" text={item.preview} />
+                        )}
+                      </span>
+                    </span>
                   </td>
                   <td>
                     <span className="cell-tags">
                       {item.tags.length === 0 && <span className="muted">—</span>}
                       {item.tags.map((tag) => (
-                        <span key={tag} className="tag">
+                        <span key={tag} className={`tag ${tintClass(tag)}`}>
                           {tag}
                         </span>
                       ))}
                     </span>
                   </td>
-                  <td className="is-right cell-mono">{formatBytes(item.sizeBytes)}</td>
+                  <td className="is-right">
+                    <span className="cell-size">
+                      <span className="cell-mono">{formatBytes(item.sizeBytes)}</span>
+                      <span className="size-bar" aria-hidden="true">
+                        <span style={{ width: `${Math.round((item.sizeBytes / largest) * 100)}%` }} />
+                      </span>
+                    </span>
+                  </td>
                   <td className="cell-time">{formatRelativeTime(item.createdAt)}</td>
                   <td className="cell-time">{formatRelativeTime(item.updatedAt)}</td>
                   <td className="is-right">

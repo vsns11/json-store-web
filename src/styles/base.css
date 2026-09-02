@@ -484,3 +484,34 @@
 .card-body {
   padding: 14px;
 }
+
+/* ---------------------------------------------------------------------------
+   Tints
+   A stable colour per name, from lib/palette.js. Used by tags and monograms.
+   --------------------------------------------------------------------------- */
+.tint-0 { --tint-bg: var(--tint-0-bg); --tint-fg: var(--tint-0-fg); }
+.tint-1 { --tint-bg: var(--tint-1-bg); --tint-fg: var(--tint-1-fg); }
+.tint-2 { --tint-bg: var(--tint-2-bg); --tint-fg: var(--tint-2-fg); }
+.tint-3 { --tint-bg: var(--tint-3-bg); --tint-fg: var(--tint-3-fg); }
+.tint-4 { --tint-bg: var(--tint-4-bg); --tint-fg: var(--tint-4-fg); }
+.tint-5 { --tint-bg: var(--tint-5-bg); --tint-fg: var(--tint-5-fg); }
+.tint-6 { --tint-bg: var(--tint-6-bg); --tint-fg: var(--tint-6-fg); }
+.tint-7 { --tint-bg: var(--tint-7-bg); --tint-fg: var(--tint-7-fg); }
+
+.monogram {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  background: var(--tint-bg, var(--surface-sunken));
+  border-radius: 9px;
+  color: var(--tint-fg, var(--text-muted));
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.json-snippet {
+  font-family: var(--mono);
+}

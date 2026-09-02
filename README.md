@@ -98,14 +98,20 @@ Everything visual is a CSS custom property, and every property lives in one file
 
 | File | What is in it |
 | --- | --- |
-| `src/styles/tokens.css` | Every colour, radius, shadow, font and code-view metric — light palette first, dark palette overriding only what differs |
+| `src/styles/tokens.css` | Every colour, radius, shadow, font and code-view metric — light palette first, dark palette overriding only what differs. Includes the eight tints used for tags and monograms |
 | `src/styles/base.css` | Element defaults and the small reusable pieces: buttons, inputs, dialogs, toasts, spinner, skeleton |
 | `src/styles/layout.css` | The shell: top bar, sidebar rail, the panel every view sits in |
 | `src/styles/views.css` | One block per screen: profile table, editor, composer, sign-in |
 
 To rebrand, edit `tokens.css` and nothing else: `--accent` and `--accent-soft` carry the brand colour,
-`--code-*` colour the JSON, `--radius*` set the corner style, `--sans` and `--mono` the typefaces. No
-colour is written anywhere outside that file, so there is nothing to hunt for.
+`--code-*` colour the JSON, `--tint-N-*` colour tags and monograms, `--radius*` set the corner style,
+`--sans` and `--mono` the typefaces. No colour is written anywhere outside that file, so there is
+nothing to hunt for.
+
+Tags and profile monograms take their colour from their own name — `lib/palette.js` hashes the text to
+one of the eight tints — so a tag looks the same in the table as it does on the profile, with nothing
+stored against it. Widening the set means adding a `--tint-8-*` pair, a `.tint-8` class in `base.css`,
+and raising `PALETTE_SIZE`.
 
 Components map one-to-one onto what you see, and each takes plain props with no shared mutable state:
 

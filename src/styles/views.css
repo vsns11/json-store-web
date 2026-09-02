@@ -27,9 +27,21 @@
 
 .table {
   width: 100%;
+  min-width: 780px;
   border-collapse: collapse;
+  /* Fixed layout so the widths below are honoured: the name column takes whatever
+     is left and its text ellipsises, rather than pushing the actions off the edge. */
+  table-layout: fixed;
   font-size: 13px;
 }
+
+/* Fixed widths for everything except the name, so rows keep their rhythm and the
+   actions never get squeezed off the edge. */
+.table th:nth-child(2) { width: 200px; }
+.table th:nth-child(3) { width: 96px; }
+.table th:nth-child(4),
+.table th:nth-child(5) { width: 130px; }
+.table th:nth-child(6) { width: 116px; }
 
 .table th {
   position: sticky;
@@ -78,6 +90,7 @@
 
 .table tbody tr:hover {
   background: var(--surface-sunken);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .table tbody tr:focus-visible {
@@ -85,14 +98,29 @@
   outline-offset: -2px;
 }
 
+.cell-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.cell-text {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .cell-name {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 
 .cell-sub {
   display: block;
-  max-width: 460px;
+  max-width: 100%;
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -104,7 +132,7 @@
 .cell-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 4px 5px;
 }
 
 .cell-mono {
@@ -119,17 +147,40 @@
   white-space: nowrap;
 }
 
+/* Tags take their colour from their own name, so the same tag reads the same everywhere. */
 .tag {
-  padding: 1px 7px;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
+  padding: 1px 8px;
+  background: var(--tint-bg, var(--surface-sunken));
   border-radius: 20px;
-  color: var(--text-muted);
+  color: var(--tint-fg, var(--text-muted));
   font-size: 11px;
+  font-weight: 550;
+  white-space: nowrap;
 }
 
-.table tbody tr:hover .tag {
-  background: var(--surface);
+.cell-size {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* How big this profile is next to the largest one on the page. */
+.size-bar {
+  display: block;
+  width: 46px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.size-bar span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--accent);
+  border-radius: 2px;
 }
 
 .row-actions {
@@ -215,11 +266,11 @@
   align-items: center;
   gap: 5px;
   padding: 2px 6px 2px 9px;
-  background: var(--accent-soft);
+  background: var(--tint-bg, var(--accent-soft));
   border-radius: 20px;
-  color: var(--accent);
+  color: var(--tint-fg, var(--accent));
   font-size: 11.5px;
-  font-weight: 500;
+  font-weight: 550;
 }
 
 .tag-chip button {
