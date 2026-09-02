@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client.js'
 import { byteSize, formatBytes } from '../lib/json.js'
-import { composeDocument, defaultValues, fieldsFor, missingFields } from '../lib/template.js'
+import { composeDocument, defaultValues, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
 import { useToasts } from '../hooks/useToasts.jsx'
+import FormField from './FormField.jsx'
 import { Icon } from './Icons.jsx'
 import JsonTree from './JsonTree.jsx'
 import TagEditor from './TagEditor.jsx'
@@ -69,6 +70,7 @@ export default function ComposeView({ onBack, onCreated }) {
   }, [])
 
   const fields = useMemo(() => (catalog ? fieldsFor(catalog, selection) : []), [catalog, selection])
+  const cards = useMemo(() => (catalog ? fieldCards(catalog, selection) : []), [catalog, selection])
 
   // Keep values for fields that are still on screen, and defaults for the ones just added.
   useEffect(() => {
@@ -197,58 +199,28 @@ export default function ComposeView({ onBack, onCreated }) {
           </div>
         </section>
 
-        <section className="compose-section">
-          <h3 className="compose-heading">Values</h3>
-          {fields.length === 0 && <p className="muted compose-empty">Pick a template to see its fields.</p>}
+        {cards.map((card) => (
+          <section className="card" key={card.id}>
+            <header className="card-head">
+              <h4>{card.name}</h4>
+              {card.description && <span className="card-note">{card.description}</span>}
+            </header>
 
-          <div className="compose-grid">
-          {fields.map((field) => (
-            <label className="compose-field" key={field.key}>
-              <span className="compose-label">
-                {field.label}
-                {field.required && <em> required</em>}
-                <small>{field.fragment}</small>
-              </span>
-
-              {field.type === 'select' ? (
-                <select
-                  className="input"
-                  value={values[field.key] ?? ''}
-                  onChange={(event) => setValues({ ...values, [field.key]: event.target.value })}
-                >
-                  {field.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              ) : field.type === 'boolean' ? (
-                <select
-                  className="input"
-                  value={String(values[field.key] ?? false)}
-                  onChange={(event) => setValues({ ...values, [field.key]: event.target.value === 'true' })}
-                >
-                  <option value="true">true</option>
-                  <option value="false">false</option>
-                </select>
-              ) : (
-                <input
-                  className={`input${field.required && !String(values[field.key] ?? '').trim() ? ' is-invalid' : ''}`}
-                  value={values[field.key] ?? ''}
-                  inputMode={field.type === 'number' ? 'decimal' : undefined}
-                  onChange={(event) => {
-                    const raw = event.target.value
-                    const parsed = field.type === 'number' && raw.trim() !== '' && !Number.isNaN(Number(raw))
-                      ? Number(raw)
-                      : raw
-                    setValues({ ...values, [field.key]: parsed })
-                  }}
+            <div className="compose-grid card-body">
+              {card.fields.map((field) => (
+                <FormField
+                  key={field.key}
+                  field={field}
+                  value={values[field.key]}
+                  invalid={missing.some((item) => item.key === field.key)}
+                  onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
                 />
-              )}
-            </label>
-          ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {cards.length === 0 && <p className="muted compose-empty">Pick a template to see its fields.</p>}
       </div>
 
       <footer className="statusbar">
@@ -262,7 +234,7 @@ export default function ComposeView({ onBack, onCreated }) {
             <Icon.Eye /> Preview
           </button>
           <button className="btn btn-sm btn-primary" onClick={create} disabled={saving || missing.length > 0}>
-            {saving ? <span className="spinner" /> : <Icon.Save />} Save to Postgres
+            {saving ? <span className="spinner" /> : <Icon.Save />} Save profile
           </button>
         </div>
       </footer>

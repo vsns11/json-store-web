@@ -41,7 +41,7 @@ export default function StatusBar({ parsed, shape, size, dirty, saving, isNew, o
         </button>
         <button className="btn btn-sm btn-primary" onClick={onSave} disabled={saving || !parsed.ok || !dirty}>
           {saving ? <span className="spinner" /> : <Icon.Save />}
-          {isNew ? 'Save to Postgres' : 'Save changes'}
+          {isNew ? 'Save profile' : 'Save changes'}
         </button>
       </div>
     </footer>

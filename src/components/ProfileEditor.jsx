@@ -256,7 +256,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
       {confirmingDelete && (
         <ConfirmDialog
           title="Delete profile"
-          message={`“${saved.name}” will be removed from PostgreSQL. This cannot be undone.`}
+          message={`“${saved.name}” will be deleted. This cannot be undone.`}
           confirmLabel="Delete"
           onConfirm={remove}
           onCancel={() => setConfirmingDelete(false)}

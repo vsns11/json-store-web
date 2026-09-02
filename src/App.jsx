@@ -212,7 +212,7 @@ export default function App() {
       {pendingDelete && (
         <ConfirmDialog
           title="Delete profile"
-          message={`The profile “${pendingDelete.name}” will be removed from PostgreSQL. This cannot be undone.`}
+          message={`The profile “${pendingDelete.name}” will be deleted. This cannot be undone.`}
           confirmLabel="Delete"
           onConfirm={deleteProfile}
           onCancel={() => setPendingDelete(null)}

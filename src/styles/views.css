@@ -515,6 +515,10 @@
   margin-top: 22px;
 }
 
+.compose-body > .card:first-of-type {
+  margin-top: 18px;
+}
+
 /* Fields flow into as many columns as the window allows. */
 .compose-grid {
   display: grid;

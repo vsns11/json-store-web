@@ -26,9 +26,34 @@ export function fieldsFor(catalog, selection) {
   )
 }
 
+/** Fields grouped by the fragment that asked for them — one card each in the composer. */
+export function fieldCards(catalog, selection) {
+  const seen = new Set()
+  return fragmentsFor(catalog, selection)
+    .map((fragment) => ({
+      id: fragment.id,
+      name: fragment.name,
+      description: fragment.description,
+      fields: (fragment.fields ?? []).filter((field) => !seen.has(field.key) && seen.add(field.key)),
+    }))
+    .filter((card) => card.fields.length > 0)
+}
+
+const EMPTY_FOR_TYPE = {
+  checkboxes: () => [],
+  tags: () => [],
+  switch: () => false,
+  checkbox: () => false,
+  boolean: () => false,
+}
+
 export function defaultValues(fields, existing = {}) {
   return Object.fromEntries(
-    fields.map((field) => [field.key, existing[field.key] ?? field.default ?? (field.type === 'boolean' ? false : '')]),
+    fields.map((field) => {
+      if (field.key in existing) return [field.key, existing[field.key]]
+      if (field.default !== undefined) return [field.key, field.default]
+      return [field.key, (EMPTY_FOR_TYPE[field.type] ?? (() => ''))()]
+    }),
   )
 }
 
@@ -41,7 +66,13 @@ export function composeDocument(catalog, selection, values) {
 
 /** Which fields are required by the selection but still empty. */
 export function missingFields(fields, values) {
-  return fields.filter((field) => field.required && String(values[field.key] ?? '').trim() === '')
+  return fields.filter((field) => {
+    if (!field.required) return false
+    const value = values[field.key]
+    if (Array.isArray(value)) return value.length === 0
+    if (typeof value === 'boolean' || typeof value === 'number') return false
+    return String(value ?? '').trim() === ''
+  })
 }
 
 function substitute(value, values) {

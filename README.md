@@ -114,10 +114,45 @@ Components map one-to-one onto what you see, and each takes plain props with no 
 | `ProfileTable` | The list of every profile, with sorting and paging |
 | `ProfileEditor` | One profile: header, toolbar, editor or tree, status bar |
 | `JsonEditor` · `JsonTree` | The two ways of viewing inputs |
-| `ComposeView` | Template pickers, generated fields, the preview dialog |
+| `ComposeView` | Template pickers, the cards of generated fields, the preview dialog |
+| `FormField` | Every input control the composer can draw (see below) |
 | `Sidebar` | Navigation, and the signed-in user |
 | `EditorToolbar` · `StatusBar` · `TagEditor` | The controls around the editor |
 | `LoginScreen` · `ConfirmDialog` · `ShortcutsDialog` · `Toasts` · `ErrorBoundary` | Sign-in and the overlays |
+
+### Adding a field to a template
+
+Fields are declared in the API's catalogue and drawn by `src/components/FormField.jsx`. Each selected
+template becomes a card of its own fields, so a fragment's inputs stay together on screen.
+
+| `type` | Control | Value stored | Extra keys |
+| --- | --- | --- | --- |
+| `text` | Single-line input | string | `placeholder` |
+| `textarea` | Multi-line input | string | `rows`, `placeholder` |
+| `number` | Numeric input | number | `min`, `max`, `step` |
+| `range` | Slider with a live readout | number | `min`, `max`, `step` |
+| `date` | Date picker | string (`YYYY-MM-DD`) | |
+| `select` | Dropdown | string | `options` |
+| `radio` | Radio group | string | `options` |
+| `switch` | On/off toggle | boolean | |
+| `checkbox` | Single checkbox | boolean | `checkboxLabel` |
+| `checkboxes` | Checkbox group | array of strings | `options` |
+| `tags` | Free-form list | array of strings | `placeholder` |
+
+Every type also takes `label`, `key`, `default`, `required` and `help`. `options` are plain strings, or
+`{ value, label }` when the stored value should differ from what is shown.
+
+```json
+{ "key": "environment", "label": "Environment", "type": "radio",
+  "options": ["local", "dev", "staging"], "default": "staging", "help": "Where the run happens" }
+```
+
+A value lands in the profile wherever the fragment's body names it: `"env": "${environment}"`. A string
+that is exactly one placeholder keeps the value's type, so switches stay booleans, sliders stay numbers
+and tag lists stay arrays.
+
+Adding a new *kind* of control means one `case` in `FormField.jsx` and a matching class in
+`base.css` — nothing else in the app needs to know about it.
 
 Data access is confined to `src/api/client.js`; the three hooks in `src/hooks/` own sign-in, the profile
 list and toasts. A component never calls `fetch` itself, so pointing the app at a different API, or
