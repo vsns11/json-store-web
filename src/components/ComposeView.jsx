@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client.js'
 import { byteSize, formatBytes } from '../lib/json.js'
-import { composeDocument, defaultValues, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
+import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import FormField from './FormField.jsx'
 import { Icon } from './Icons.jsx'
 import PreviewDialog from './PreviewDialog.jsx'
 import TagEditor from './TagEditor.jsx'
+import TemplateForm from './TemplateForm.jsx'
 
 const NONE = ''
 
@@ -39,16 +40,13 @@ export default function ComposeView({ onBack, onCreated }) {
 
   const fields = useMemo(() => (catalog ? fieldsFor(catalog, selection) : []), [catalog, selection])
   const cards = useMemo(() => (catalog ? fieldCards(catalog, selection) : []), [catalog, selection])
+  const composed = useMemo(() => (catalog ? compose(catalog, selection, values).payload : {}), [catalog, selection, values])
 
-  // Keep values for fields that are still on screen, and defaults for the ones just added.
-  useEffect(() => {
-    setValues((current) => defaultValues(fields, current))
-  }, [fields])
-
-  const composed = useMemo(
-    () => (catalog ? composeDocument(catalog, selection, values) : {}),
-    [catalog, selection, values],
-  )
+  const selectFragment = (nextSelection) => {
+    const result = compose(catalog, nextSelection, values)
+    setSelection(nextSelection)
+    setValues(result.values)
+  }
   const serialized = JSON.stringify(composed, null, 2)
   const missing = missingFields(fields, values)
   const mergedCount = Object.values(selection).filter(Boolean).length
@@ -95,6 +93,7 @@ export default function ComposeView({ onBack, onCreated }) {
         description: meta.description.trim() || null,
         tags: meta.tags,
         payload: composed,
+        template: { selection, values },
       })
       toasts.success(`Stored “${saved.name}”`)
       onCreated(saved)
@@ -136,59 +135,15 @@ export default function ComposeView({ onBack, onCreated }) {
       </header>
 
       <div className="compose-body">
-        <section className="compose-section">
-          <h3 className="compose-heading">Templates</h3>
-          <div className="compose-grid">
-          {catalog.groups.map((group) => {
-            const options = catalog.fragments.filter((fragment) => fragment.group === group.id)
-            const chosen = catalog.fragments.find((fragment) => fragment.id === selection[group.id])
-            return (
-              <label className="compose-field" key={group.id}>
-                <span className="compose-label">
-                  {group.label}
-                  {group.required && <em> required</em>}
-                </span>
-                <select
-                  className="input"
-                  value={selection[group.id] ?? NONE}
-                  onChange={(event) => setSelection({ ...selection, [group.id]: event.target.value })}
-                >
-                  {!group.required && <option value={NONE}>— none —</option>}
-                  {options.map((fragment) => (
-                    <option key={fragment.id} value={fragment.id}>
-                      {fragment.name}
-                    </option>
-                  ))}
-                </select>
-                {chosen?.description && <span className="compose-help">{chosen.description}</span>}
-              </label>
-            )
-          })}
-          </div>
-        </section>
-
-        {cards.map((card) => (
-          <section className="card" key={card.id}>
-            <header className="card-head">
-              <h4>{card.name}</h4>
-              {card.description && <span className="card-note">{card.description}</span>}
-            </header>
-
-            <div className="compose-grid card-body">
-              {card.fields.map((field) => (
-                <FormField
-                  key={field.key}
-                  field={field}
-                  value={values[field.key]}
-                  invalid={missing.some((item) => item.key === field.key)}
-                  onChange={(next) => setValues((current) => ({ ...current, [field.key]: next }))}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
-
-        {cards.length === 0 && <p className="muted compose-empty">Pick a template to see its fields.</p>}
+        <TemplateForm
+          catalog={catalog}
+          selection={selection}
+          values={values}
+          cards={cards}
+          invalidKeys={missing.map((field) => field.key)}
+          onSelect={selectFragment}
+          onValue={(key, next) => setValues({ ...values, [key]: next })}
+        />
       </div>
 
       <footer className="statusbar">

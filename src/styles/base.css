@@ -515,3 +515,14 @@
 .json-snippet {
   font-family: var(--mono);
 }
+
+/* A short warning inside a view, for something the reader should know before acting. */
+.notice {
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  background: var(--danger-soft);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.5;
+}

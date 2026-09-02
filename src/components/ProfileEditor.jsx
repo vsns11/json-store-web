@@ -10,12 +10,14 @@ import {
   sortJsonKeys,
 } from '../lib/json.js'
 import { downloadJson, readJsonFile } from '../lib/files.js'
+import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { Icon } from './Icons.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
 import JsonEditor from './JsonEditor.jsx'
 import JsonTree from './JsonTree.jsx'
+import TemplateForm from './TemplateForm.jsx'
 import StatusBar from './StatusBar.jsx'
 import TagEditor from './TagEditor.jsx'
 
@@ -38,16 +40,48 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
     text: saved ? JSON.stringify(saved.payload, null, 2) : '',
   }))
   const [baseline, setBaseline] = useState(() => snapshot(draft))
-  const [view, setView] = useState('code')
+  // A profile composed from templates remembers its selection, and can be edited as that form again.
+  const [template, setTemplate] = useState(saved?.template ?? null)
+  const [catalog, setCatalog] = useState(null)
+  const [view, setView] = useState(saved?.template ? 'form' : 'code')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [dragging, setDragging] = useState(false)
+
+  // The catalogue is only needed by the form, so it is fetched when there is one to draw.
+  useEffect(() => {
+    if (!template || catalog) return
+    api.templates().then(setCatalog).catch((failure) => toasts.error(failure.message))
+  }, [template, catalog]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = useMemo(() => parseJson(draft.text), [draft.text])
   const shape = useMemo(() => (parsed.ok ? describeShape(parsed.value) : null), [parsed])
   const dirty = snapshot(draft) !== baseline
   // The tree needs something that parses; anything else falls back to the editor.
-  const effectiveView = view === 'tree' && parsed.ok ? 'tree' : 'code'
+  const effectiveView = view === 'form' && template ? 'form' : view === 'tree' && parsed.ok ? 'tree' : 'code'
+
+  const cards = useMemo(
+    () => (catalog && template ? fieldCards(catalog, template.selection) : []),
+    [catalog, template],
+  )
+  const missing = useMemo(
+    () => (catalog && template ? missingFields(fieldsFor(catalog, template.selection), template.values) : []),
+    [catalog, template],
+  )
+
+  // jsonb does not preserve key order, so the comparison has to ignore it.
+  const matchesTemplate = useMemo(() => {
+    if (!catalog || !template || !parsed.ok) return true
+    const fromTemplate = JSON.stringify(compose(catalog, template.selection, template.values).payload, null, 2)
+    return sortJsonKeys(fromTemplate).text === sortJsonKeys(draft.text).text
+  }, [catalog, template, parsed.ok, draft.text])
+
+  /** Any change in the form rebuilds the inputs from the template. */
+  const recompose = (selection, values) => {
+    const result = compose(catalog, selection, values)
+    setTemplate({ selection, values: result.values })
+    patch({ text: JSON.stringify(result.payload, null, 2) })
+  }
 
   const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
 
@@ -78,6 +112,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         description: draft.description.trim() || null,
         tags: draft.tags,
         payload: parsedNow.value,
+        template,
       }
       const result = isNew ? await api.create(body) : await api.update(saved.id, body)
       setBaseline(snapshot(draft))
@@ -178,6 +213,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         view={effectiveView}
         onViewChange={setView}
         canFormat={parsed.ok}
+        canUseForm={Boolean(template)}
         onFormat={() => transform(formatJson)}
         onMinify={() => transform(minifyJson)}
         onSortKeys={() => transform(sortJsonKeys)}
@@ -200,7 +236,31 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
           loadFile(event.dataTransfer.files[0])
         }}
       >
-        {effectiveView === 'tree' ? (
+        {effectiveView === 'form' ? (
+          catalog ? (
+            <div className="compose-body">
+              {!matchesTemplate && (
+                <p className="notice">
+                  These inputs have been edited by hand since they were composed. Changing a field here
+                  rebuilds them from the templates, and those edits will be lost.
+                </p>
+              )}
+              <TemplateForm
+                catalog={catalog}
+                selection={template.selection}
+                values={template.values}
+                cards={cards}
+                invalidKeys={missing.map((field) => field.key)}
+                onSelect={(selection) => recompose(selection, template.values)}
+                onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
+              />
+            </div>
+          ) : (
+            <div className="table-message">
+              <span className="spinner" />
+            </div>
+          )
+        ) : effectiveView === 'tree' ? (
           <JsonTree value={parsed.value} />
         ) : (
           <JsonEditor

@@ -57,6 +57,15 @@ export function defaultValues(fields, existing = {}) {
   )
 }
 
+/**
+ * The field values and merged inputs for a selection. Values already typed are kept; fields the new
+ * selection introduces get their defaults. Used wherever a selection changes.
+ */
+export function compose(catalog, selection, values) {
+  const next = defaultValues(fieldsFor(catalog, selection), values)
+  return { values: next, payload: composeDocument(catalog, selection, next) }
+}
+
 export function composeDocument(catalog, selection, values) {
   return fragmentsFor(catalog, selection).reduce(
     (result, fragment) => deepMerge(result, substitute(fragment.body, values)),

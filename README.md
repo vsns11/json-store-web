@@ -27,7 +27,12 @@ The landing view lists every profile — name, description, tags, size, created 
 sortable columns, pagination and search. Editing starts from a row: **Edit** opens the profile, and
 saving brings you back to the table. Profiles are created, updated and deleted from here.
 
-**Two ways to look at a profile's inputs**
+**Three ways to work on a profile, two of them always available**
+
+- **Form** — only for profiles composed from templates. Editing one opens on this tab, showing the
+  templates it was built from and the values that were typed, ready to be changed. Changing anything
+  rebuilds the inputs from those templates; if they were edited by hand since, the form says so before
+  you overwrite that work.
 
 - **Editor** — a syntax-coloured editor: keys, strings, numbers, booleans and punctuation are coloured
   as you type, with line numbers, `Tab` indentation, and live validation that reports the exact line and
@@ -42,6 +47,9 @@ saving brings you back to the table. Profiles are created, updated and deleted f
 and optionally a customer, payment, delivery and expectation module, then fill in the handful of fields
 they ask for. **Preview** shows the merged result before you save it. The catalogue comes from the API,
 so adding fragments is a configuration change on that side.
+
+The selection is stored with the profile, so **Edit** on a composed profile reopens that same form with
+everything still filled in — the templates chosen and the values typed — rather than only the raw JSON.
 
 **Everything else**
 

@@ -4,6 +4,7 @@ export default function EditorToolbar({
   view,
   onViewChange,
   canFormat,
+  canUseForm,
   onFormat,
   onMinify,
   onSortKeys,
@@ -42,6 +43,15 @@ export default function EditorToolbar({
       <span className="toolbar-divider" />
 
       <div className="segmented" style={{ marginLeft: 'auto' }}>
+        {canUseForm && (
+          <button
+            className={view === 'form' ? 'is-active' : ''}
+            onClick={() => onViewChange('form')}
+            title="Edit the templates this profile was composed from"
+          >
+            Form
+          </button>
+        )}
         <button className={view === 'code' ? 'is-active' : ''} onClick={() => onViewChange('code')}>
           Editor
         </button>
