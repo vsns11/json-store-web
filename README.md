@@ -9,10 +9,12 @@ the API's address is supplied at container start.
 
 ```
 src/
-├── components/   table, editor, tree form, composer, sign-in, sidebar, dialogs
-├── lib/          json.js (parse, format, syntax-error locator) · jsonPath.js · template.js (merging)
-├── hooks/        sign-in, document list, toasts
-└── api/          the HTTP client
+├── components/   one file per piece of the interface (see the map below)
+├── styles/       tokens.css · base.css · layout.css · views.css
+├── lib/          json.js (parse, format, error locator) · highlight.js · template.js (merging)
+├── hooks/        sign-in, profile list, toasts
+├── api/          the HTTP client
+└── config.js     runtime configuration read from the container
 nginx/            config templates rendered at container start
 openshift/        Deployment, Service, Route, HPA, BuildConfig
 ```
@@ -25,24 +27,21 @@ The landing view lists every profile — name, description, tags, size, created 
 sortable columns, pagination and search. Editing starts from a row: **Edit** opens the profile, and
 saving brings you back to the table. Profiles are created, updated and deleted from here.
 
-**Three ways to edit a profile's inputs**
+**Two ways to look at a profile's inputs**
 
-- **Form** (the default) — the inputs drawn as their JSON tree, braces and colouring included, with
-  every key and value editable in place. Keys keep their accent colour while you rename them, strings,
-  numbers and booleans keep theirs, and branches collapse. Change a field to an object or a list to
-  nest deeper, and use the **+ field** / **+ item** buttons at any level. Adding a row to a list of
-  objects copies the shape of the last one, so filling in a template is mostly typing values. No JSON
-  is written by hand.
-- **Editor** — line numbers, `Tab` indentation, and live validation that reports the exact line and
-  column of the first syntax error (click the error to jump the caret there).
-- **Tree** — a collapsible view of the parsed document.
+- **Editor** — a syntax-coloured editor: keys, strings, numbers, booleans and punctuation are coloured
+  as you type, with line numbers, `Tab` indentation, and live validation that reports the exact line and
+  column of the first syntax error (click the error to jump the caret there). Colouring is painted on a
+  layer under a transparent textarea, so the caret, selection, undo and native shortcuts all behave
+  exactly as they normally would.
+- **Tree** — the same document collapsed into a browsable tree.
 
 **Building a big profile from small ones**
 
 **New profile from template** composes one large profile out of catalogue fragments: choose a scenario
-and optionally a customer, payment, delivery and expectation module, fill in the handful of fields they
-ask for, and watch the merged result build up beside the form before saving it. The catalogue comes from
-the API, so adding fragments is a configuration change on that side.
+and optionally a customer, payment, delivery and expectation module, then fill in the handful of fields
+they ask for. **Preview** shows the merged result before you save it. The catalogue comes from the API,
+so adding fragments is a configuration change on that side.
 
 **Everything else**
 
@@ -92,6 +91,37 @@ the bundle. For static hosting (S3+CloudFront, Pages, Netlify, Vercel) there is 
 nginx serves the bundle with gzip, a content security policy whose `connect-src` is widened to
 `API_BASE_URL`, one-year immutable caching on content-hashed assets, and `no-store` on `index.html` and
 `config.js` so a deploy reaches browsers immediately.
+
+## Making it yours
+
+Everything visual is a CSS custom property, and every property lives in one file.
+
+| File | What is in it |
+| --- | --- |
+| `src/styles/tokens.css` | Every colour, radius, shadow, font and code-view metric — light palette first, dark palette overriding only what differs |
+| `src/styles/base.css` | Element defaults and the small reusable pieces: buttons, inputs, dialogs, toasts, spinner, skeleton |
+| `src/styles/layout.css` | The shell: top bar, sidebar rail, the panel every view sits in |
+| `src/styles/views.css` | One block per screen: profile table, editor, composer, sign-in |
+
+To rebrand, edit `tokens.css` and nothing else: `--accent` and `--accent-soft` carry the brand colour,
+`--code-*` colour the JSON, `--radius*` set the corner style, `--sans` and `--mono` the typefaces. No
+colour is written anywhere outside that file, so there is nothing to hunt for.
+
+Components map one-to-one onto what you see, and each takes plain props with no shared mutable state:
+
+| Component | Shows |
+| --- | --- |
+| `ProfileTable` | The list of every profile, with sorting and paging |
+| `ProfileEditor` | One profile: header, toolbar, editor or tree, status bar |
+| `JsonEditor` · `JsonTree` | The two ways of viewing inputs |
+| `ComposeView` | Template pickers, generated fields, the preview dialog |
+| `Sidebar` | Navigation, and the signed-in user |
+| `EditorToolbar` · `StatusBar` · `TagEditor` | The controls around the editor |
+| `LoginScreen` · `ConfirmDialog` · `ShortcutsDialog` · `Toasts` · `ErrorBoundary` | Sign-in and the overlays |
+
+Data access is confined to `src/api/client.js`; the three hooks in `src/hooks/` own sign-in, the profile
+list and toasts. A component never calls `fetch` itself, so pointing the app at a different API, or
+changing how errors surface, is a one-file change.
 
 ## Deploying to OpenShift
 

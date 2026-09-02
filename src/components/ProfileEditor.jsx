@@ -13,7 +13,6 @@ import { useToasts } from '../hooks/useToasts.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { Icon } from './Icons.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
-import FormEditor from './FormEditor.jsx'
 import JsonEditor from './JsonEditor.jsx'
 import JsonTree from './JsonTree.jsx'
 import StatusBar from './StatusBar.jsx'
@@ -38,8 +37,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
     text: saved ? JSON.stringify(saved.payload, null, 2) : '',
   }))
   const [baseline, setBaseline] = useState(() => snapshot(draft))
-  // Form first: most edits are a field at a time, and the raw JSON is one click away.
-  const [view, setView] = useState('form')
+  const [view, setView] = useState('code')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -47,9 +45,8 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   const parsed = useMemo(() => parseJson(draft.text), [draft.text])
   const shape = useMemo(() => (parsed.ok ? describeShape(parsed.value) : null), [parsed])
   const dirty = snapshot(draft) !== baseline
-  // The form and the tree both need a parseable document; an empty one can still be filled in via the form.
-  const canStructure = parsed.ok || parsed.empty
-  const effectiveView = !canStructure ? 'code' : view === 'tree' && !parsed.ok ? 'code' : view
+  // The tree needs something that parses; anything else falls back to the editor.
+  const effectiveView = view === 'tree' && parsed.ok ? 'tree' : 'code'
 
   const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
 
@@ -193,7 +190,6 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         view={effectiveView}
         onViewChange={setView}
         canFormat={parsed.ok}
-        canStructure={canStructure}
         onFormat={() => transform(formatJson)}
         onMinify={() => transform(minifyJson)}
         onSortKeys={() => transform(sortJsonKeys)}
@@ -216,9 +212,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
           readFile(event.dataTransfer.files[0])
         }}
       >
-        {effectiveView === 'form' ? (
-          <FormEditor text={draft.text} isEmpty={Boolean(parsed.empty)} onChange={(text) => patch({ text })} />
-        ) : effectiveView === 'tree' ? (
+        {effectiveView === 'tree' ? (
           <JsonTree value={parsed.value} />
         ) : (
           <JsonEditor

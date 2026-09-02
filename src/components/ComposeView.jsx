@@ -9,6 +9,38 @@ import TagEditor from './TagEditor.jsx'
 
 const NONE = ''
 
+/** The composed profile, shown on demand rather than taking up half the screen. */
+function PreviewDialog({ composed, size, onClose }) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="dialog dialog-wide" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <header className="dialog-head">
+          <h3>Composed profile</h3>
+          <span className="muted">{formatBytes(size)}</span>
+        </header>
+
+        <div className="dialog-body">
+          <JsonTree value={composed} />
+        </div>
+
+        <div className="dialog-actions">
+          <button className="btn btn-primary" onClick={onClose} autoFocus>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /**
  * Builds one large document out of the small templates in the catalogue: pick a fragment per
  * group, fill in the handful of fields they ask for, and the merged result is what gets stored.
@@ -22,6 +54,7 @@ export default function ComposeView({ onBack, onCreated }) {
   const [meta, setMeta] = useState({ name: '', description: '', tags: [] })
   const [nameEdited, setNameEdited] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
 
   useEffect(() => {
     api
@@ -133,8 +166,9 @@ export default function ComposeView({ onBack, onCreated }) {
       </header>
 
       <div className="compose-body">
-        <div className="compose-form">
+        <section className="compose-section">
           <h3 className="compose-heading">Templates</h3>
+          <div className="compose-grid">
           {catalog.groups.map((group) => {
             const options = catalog.fragments.filter((fragment) => fragment.group === group.id)
             const chosen = catalog.fragments.find((fragment) => fragment.id === selection[group.id])
@@ -160,10 +194,14 @@ export default function ComposeView({ onBack, onCreated }) {
               </label>
             )
           })}
+          </div>
+        </section>
 
+        <section className="compose-section">
           <h3 className="compose-heading">Values</h3>
-          {fields.length === 0 && <p className="muted form-hint">Pick a template to see its fields.</p>}
+          {fields.length === 0 && <p className="muted compose-empty">Pick a template to see its fields.</p>}
 
+          <div className="compose-grid">
           {fields.map((field) => (
             <label className="compose-field" key={field.key}>
               <span className="compose-label">
@@ -209,15 +247,8 @@ export default function ComposeView({ onBack, onCreated }) {
               )}
             </label>
           ))}
-        </div>
-
-        <div className="compose-preview">
-          <div className="compose-preview-head">
-            <span>Composed profile</span>
-            <span className="muted">{formatBytes(byteSize(serialized))}</span>
           </div>
-          <JsonTree value={composed} />
-        </div>
+        </section>
       </div>
 
       <footer className="statusbar">
@@ -226,11 +257,19 @@ export default function ComposeView({ onBack, onCreated }) {
         </span>
         {missing.length > 0 && <span className="status-error">{missing.map((field) => field.label).join(', ')} required</span>}
         <div className="status-actions">
+          <span className="muted">{formatBytes(byteSize(serialized))}</span>
+          <button className="btn btn-sm" onClick={() => setPreviewing(true)}>
+            <Icon.Eye /> Preview
+          </button>
           <button className="btn btn-sm btn-primary" onClick={create} disabled={saving || missing.length > 0}>
             {saving ? <span className="spinner" /> : <Icon.Save />} Save to Postgres
           </button>
         </div>
       </footer>
+
+      {previewing && (
+        <PreviewDialog composed={composed} size={byteSize(serialized)} onClose={() => setPreviewing(false)} />
+      )}
     </section>
   )
 }

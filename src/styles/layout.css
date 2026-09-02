@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Layout
+   The shell: top bar, sidebar rail, the panel every view sits in.
+   ========================================================================== */
+
+.app {  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.topbar-stats {
+  display: flex;
+  gap: 18px;
+  margin-left: 8px;
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.topbar-stats b {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  min-height: 0;
+}
+
+.content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+}
+
+.content > .panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.menu-trigger {
+  padding: 7px 9px;
+}
+
+.back-button {
+  padding: 4px 8px;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 58px;
+  padding: 12px 8px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  transition: width 0.16s ease;
+}
+
+.sidebar.is-expanded {
+  width: 216px;
+}
+
+.side-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  margin-bottom: 2px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.side-item:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.side-item.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 550;
+}
+
+.side-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+}
+
+.side-label {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sidebar.is-expanded .side-label {
+  opacity: 1;
+}
+
+.side-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  color: var(--text-faint);
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sidebar.is-expanded .side-footer {
+  opacity: 1;
+}
+
+.side-footer span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 940px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 34%) 1fr;
+  }
+
+  .topbar-stats {
+    display: none;
+  }
+}

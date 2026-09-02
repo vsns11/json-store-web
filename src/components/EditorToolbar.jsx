@@ -4,7 +4,6 @@ export default function EditorToolbar({
   view,
   onViewChange,
   canFormat,
-  canStructure,
   onFormat,
   onMinify,
   onSortKeys,
@@ -43,14 +42,6 @@ export default function EditorToolbar({
       <span className="toolbar-divider" />
 
       <div className="segmented" style={{ marginLeft: 'auto' }}>
-        <button
-          className={view === 'form' ? 'is-active' : ''}
-          onClick={() => onViewChange('form')}
-          disabled={!canStructure}
-          title="Edit field by field"
-        >
-          Form
-        </button>
         <button className={view === 'code' ? 'is-active' : ''} onClick={() => onViewChange('code')}>
           Editor
         </button>

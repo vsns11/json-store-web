@@ -1,20 +1,33 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
+import { tokenizeJson } from '../lib/highlight.js'
 
-const LINE_HEIGHT = 20
-
-/** Plain textarea plus a scroll-synced gutter — the error line is highlighted in the gutter. */
+/**
+ * A plain textarea for editing, with a coloured copy of the same text painted underneath and a
+ * scroll-synced gutter beside it. The textarea keeps its own caret, selection and undo history;
+ * only its text is made transparent, so what you see is the highlighted layer lining up exactly.
+ */
 export default function JsonEditor({ value, onChange, errorLine, textareaRef }) {
   const gutterRef = useRef(null)
+  const layerRef = useRef(null)
   const lineCount = value.split('\n').length
+  const tokens = useMemo(() => tokenizeJson(value), [value])
 
   const handleKeyDown = (event) => {
     if (event.key !== 'Tab') return
     event.preventDefault()
     const input = event.target
     const { selectionStart, selectionEnd } = input
-    const next = `${value.slice(0, selectionStart)}  ${value.slice(selectionEnd)}`
-    onChange(next)
+    onChange(`${value.slice(0, selectionStart)}  ${value.slice(selectionEnd)}`)
     requestAnimationFrame(() => input.setSelectionRange(selectionStart + 2, selectionStart + 2))
+  }
+
+  const syncScroll = (event) => {
+    const { scrollTop, scrollLeft } = event.target
+    if (gutterRef.current) gutterRef.current.scrollTop = scrollTop
+    if (layerRef.current) {
+      layerRef.current.scrollTop = scrollTop
+      layerRef.current.scrollLeft = scrollLeft
+    }
   }
 
   return (
@@ -26,20 +39,33 @@ export default function JsonEditor({ value, onChange, errorLine, textareaRef }) 
           </div>
         ))}
       </div>
-      <textarea
-        ref={textareaRef}
-        className="code-input"
-        value={value}
-        spellCheck="false"
-        autoComplete="off"
-        placeholder={'{\n  "hello": "world"\n}'}
-        style={{ minHeight: lineCount * LINE_HEIGHT }}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onScroll={(event) => {
-          if (gutterRef.current) gutterRef.current.scrollTop = event.target.scrollTop
-        }}
-      />
+
+      <div className="code-area">
+        <pre className="code-layer" ref={layerRef} aria-hidden="true">
+          {tokens.map((token, index) =>
+            token.kind === 'plain' ? (
+              token.text
+            ) : (
+              <span key={index} className={`token-${token.kind}`}>
+                {token.text}
+              </span>
+            ),
+          )}
+          {'\n'}
+        </pre>
+
+        <textarea
+          ref={textareaRef}
+          className="code-input"
+          value={value}
+          spellCheck="false"
+          autoComplete="off"
+          placeholder={'{\n  "scenario": "checkout"\n}'}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onScroll={syncScroll}
+        />
+      </div>
     </>
   )
 }
