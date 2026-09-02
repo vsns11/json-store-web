@@ -569,29 +569,29 @@
   background: var(--warn);
 }
 
-.compose-body {
+.template-form {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 16px 20px 24px;
 }
 
-.compose-section + .compose-section {
+.template-section + .template-section {
   margin-top: 22px;
 }
 
-.compose-body > .card:first-of-type {
+.template-form > .card:first-of-type {
   margin-top: 18px;
 }
 
 /* Fields flow into as many columns as the window allows. */
-.compose-grid {
+.field-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px 20px;
 }
 
-.compose-heading {
+.template-heading {
   margin: 14px 0 8px;
   color: var(--text-faint);
   font-size: 11px;
@@ -600,44 +600,11 @@
   text-transform: uppercase;
 }
 
-.compose-heading:first-child {
+.template-heading:first-child {
   margin-top: 0;
 }
 
-.compose-field {
-  display: block;
-}
-
-.compose-label {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 3px;
-  font-size: 12.5px;
-  font-weight: 550;
-}
-
-.compose-label em {
-  color: var(--warn);
-  font-size: 10.5px;
-  font-style: normal;
-}
-
-.compose-label small {
-  margin-left: auto;
-  color: var(--text-faint);
-  font-size: 10.5px;
-  font-weight: 400;
-}
-
-.compose-help {
-  display: block;
-  margin-top: 3px;
-  color: var(--text-faint);
-  font-size: 11.5px;
-}
-
-.compose-empty {
+.template-empty {
   margin: 2px 0 0;
   font-size: 13px;
 }

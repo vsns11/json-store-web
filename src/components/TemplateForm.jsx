@@ -4,8 +4,8 @@ const NONE = ''
 
 /**
  * The fields a template selection asks for: one card per chosen fragment, holding only the fields
- * its body actually substitutes. The composer also shows the pickers above them; editing an
- * existing profile does not, because its templates are already settled.
+ * its body actually substitutes. A new profile also gets the pickers above them; an existing one
+ * does not, because its templates are already settled.
  */
 export default function TemplateForm({
   catalog,
@@ -20,40 +20,38 @@ export default function TemplateForm({
   return (
     <>
       {showPickers && (
-      <section className="compose-section">
-        <h3 className="compose-heading">Templates</h3>
+        <section className="template-section">
+          <h3 className="template-heading">Templates</h3>
 
-        <div className="compose-grid">
-          {catalog.groups.map((group) => {
-            const options = catalog.fragments.filter((fragment) => fragment.group === group.id)
-            const chosen = catalog.fragments.find((fragment) => fragment.id === selection[group.id])
+          <div className="field-grid">
+            {catalog.groups.map((group) => {
+              const options = catalog.fragments.filter((fragment) => fragment.group === group.id)
+              const chosen = catalog.fragments.find((fragment) => fragment.id === selection[group.id])
 
-            return (
-              <label className="field" key={group.id}>
-                <span className="field-label">
-                  {group.label}
-                  {group.required && <em className="field-required"> required</em>}
-                </span>
+              return (
+                <label className="field" key={group.id}>
+                  <span className="field-label">{group.label}</span>
 
-                <select
-                  className="input"
-                  value={selection[group.id] ?? NONE}
-                  onChange={(event) => onSelect({ ...selection, [group.id]: event.target.value })}
-                >
-                  {!group.required && <option value={NONE}>— none —</option>}
-                  {options.map((fragment) => (
-                    <option key={fragment.id} value={fragment.id}>
-                      {fragment.name}
-                    </option>
-                  ))}
-                </select>
+                  <select
+                    className="input"
+                    value={selection[group.id] ?? NONE}
+                    onChange={(event) => onSelect({ ...selection, [group.id]: event.target.value })}
+                  >
+                    {/* Every group can be left out: a profile may be written by hand instead. */}
+                    <option value={NONE}>— none —</option>
+                    {options.map((fragment) => (
+                      <option key={fragment.id} value={fragment.id}>
+                        {fragment.name}
+                      </option>
+                    ))}
+                  </select>
 
-                {chosen?.description && <span className="field-help">{chosen.description}</span>}
-              </label>
-            )
-          })}
-        </div>
-      </section>
+                  {chosen?.description && <span className="field-help">{chosen.description}</span>}
+                </label>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       {cards.map((card) => (
@@ -63,7 +61,7 @@ export default function TemplateForm({
             {card.description && <span className="card-note">{card.description}</span>}
           </header>
 
-          <div className="compose-grid card-body">
+          <div className="field-grid card-body">
             {card.fields.map((field) => (
               <FormField
                 key={field.key}
@@ -77,7 +75,13 @@ export default function TemplateForm({
         </section>
       ))}
 
-      {cards.length === 0 && <p className="muted compose-empty">Pick a template to see its fields.</p>}
+      {cards.length === 0 && (
+        <p className="muted template-empty">
+          {showPickers
+            ? 'Pick a template to fill in its fields, or write the inputs yourself on the Editor tab.'
+            : 'This profile has no templates behind it.'}
+        </p>
+      )}
     </>
   )
 }

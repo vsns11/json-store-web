@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Icon } from './Icons.jsx'
 
 /**
- * Every input the composer can draw, chosen by a field's `type`. Adding a control here — and a
+ * Every input the template form can draw, chosen by a field's `type`. Adding a control here — and a
  * `type` in the catalogue — is all it takes to offer a new kind of field; nothing else changes.
  *
  *   text · textarea · number · range · date · select · radio

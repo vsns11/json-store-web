@@ -47,7 +47,7 @@ export default function EditorToolbar({
           <button
             className={view === 'form' ? 'is-active' : ''}
             onClick={() => onViewChange('form')}
-            title="Edit the templates this profile was composed from"
+            title="Build the inputs from templates"
           >
             Form
           </button>

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from './api/client.js'
-import ComposeView from './components/ComposeView.jsx'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
 import ProfileEditor from './components/ProfileEditor.jsx'
 import ProfileTable from './components/ProfileTable.jsx'
@@ -119,12 +118,11 @@ export default function App() {
         <Sidebar
           expanded={sidebarExpanded}
           // Editing an existing profile is not one of the destinations in the rail.
-          activeItem={view === 'editor' ? (selected ? '' : 'new') : view === 'compose' ? 'compose' : 'profiles'}
+          activeItem={view === 'editor' ? (selected ? '' : 'new') : 'profiles'}
           theme={theme}
           user={user}
           onShowProfiles={showProfiles}
           onNewProfile={startNewProfile}
-          onCompose={() => setView('compose')}
           onRefresh={refresh}
           onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           onShowShortcuts={() => setShowShortcuts(true)}
@@ -132,15 +130,7 @@ export default function App() {
         />
 
         <main className="content">
-          {view === 'compose' ? (
-            <ComposeView
-              onBack={showProfiles}
-              onCreated={() => {
-                refresh()
-                setView('table')
-              }}
-            />
-          ) : view === 'table' ? (
+          {view === 'table' ? (
             <ProfileTable
               query={query}
               onQueryChange={update}

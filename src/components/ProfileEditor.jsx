@@ -25,12 +25,16 @@ import TagEditor from './TagEditor.jsx'
 
 const snapshot = (draft) => JSON.stringify(draft)
 
+/** A new profile starts with no templates chosen; picking one fills in the inputs. */
+const EMPTY_TEMPLATE = { selection: {}, values: {} }
+
+const hasSelection = (template) => Object.values(template?.selection ?? {}).some(Boolean)
+
 /**
  * Edits one document. Mounted with a key of the document id, so switching
  * documents always starts from a clean draft.
  */
 export default function ProfileEditor({ document: saved, onSaved, onDeleted, onBack }) {
-  const isNew = !saved
   const toasts = useToasts()
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
@@ -44,10 +48,11 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   const [baseline, setBaseline] = useState(() => snapshot(draft))
   // A profile composed from templates remembers its selection, and can be edited as that form again.
   // Older ones do not, so their selection is worked out from the inputs instead.
-  const [template, setTemplate] = useState(saved?.template ?? null)
+  const isNew = !saved
+  const [template, setTemplate] = useState(saved?.template ?? (isNew ? EMPTY_TEMPLATE : null))
   const [inferred, setInferred] = useState(false)
   const [catalog, setCatalog] = useState(null)
-  const [view, setView] = useState(saved?.template ? 'form' : 'code')
+  const [view, setView] = useState(isNew || saved?.template ? 'form' : 'code')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -94,7 +99,13 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   const recompose = (selection, values) => {
     const result = compose(catalog, selection, values)
     setTemplate({ selection, values: result.values })
-    patch({ text: JSON.stringify(result.payload, null, 2) })
+
+    const changes = { text: JSON.stringify(result.payload, null, 2) }
+    // A new profile takes its name from the scenario until someone types their own.
+    if (isNew && !draft.name.trim() && result.values.scenarioName) {
+      changes.name = String(result.values.scenarioName)
+    }
+    patch(changes)
   }
 
   const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
@@ -126,7 +137,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         description: draft.description.trim() || null,
         tags: draft.tags,
         payload: parsedNow.value,
-        template,
+        template: hasSelection(template) ? template : null,
       }
       const result = isNew ? await api.create(body) : await api.update(saved.id, body)
       setBaseline(snapshot(draft))
@@ -227,7 +238,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         view={effectiveView}
         onViewChange={setView}
         canFormat={parsed.ok}
-        canUseForm={Boolean(template)}
+        canUseForm={isNew || Boolean(template)}
         onFormat={() => transform(formatJson)}
         onMinify={() => transform(minifyJson)}
         onSortKeys={() => transform(sortJsonKeys)}
@@ -252,7 +263,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
       >
         {effectiveView === 'form' ? (
           catalog ? (
-            <div className="compose-body">
+            <div className="template-form">
               {inferred ? (
                 <p className="notice notice-info">
                   This profile was saved before its templates were recorded, so the fields below were
@@ -273,7 +284,8 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
                 values={template.values}
                 cards={cards}
                 invalidKeys={missing.map((field) => field.key)}
-                showPickers={false}
+                showPickers={isNew}
+                onSelect={(selection) => recompose(selection, template.values)}
                 onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
               />
             </div>

@@ -52,13 +52,14 @@ saving brings you back to the table. Profiles are created, updated and deleted f
 
 **Building a big profile from small ones**
 
-**New profile from template** composes one large profile out of catalogue fragments: choose a scenario
-and optionally a customer, payment, delivery and expectation module, then fill in the handful of fields
-they ask for. **Preview** shows the merged result before you save it. The catalogue comes from the API,
-so adding fragments is a configuration change on that side.
+There is one **New profile**, and it opens the same screen editing does. On its Form tab, pick a
+scenario and optionally a customer, payment, delivery and expectation module, and the merged inputs
+build up as you fill in the fields they ask for; leave every picker on *none* and write the inputs
+yourself on the Editor tab instead. The catalogue comes from the API, so adding fragments is a
+configuration change on that side.
 
-The selection is stored with the profile, so **Edit** on a composed profile reopens that same form with
-everything still filled in — the templates chosen and the values typed — rather than only the raw JSON.
+The selection is stored with the profile, so **Edit** reopens that same form with everything still
+filled in — the templates chosen and the values typed — rather than only the raw JSON.
 
 **Everything else**
 
@@ -163,10 +164,10 @@ Components map one-to-one onto what you see, and each takes plain props with no 
 | Component | Shows |
 | --- | --- |
 | `ProfileTable` | The list of every profile, with sorting and paging |
-| `ProfileEditor` | One profile: header, toolbar, editor or tree, status bar |
+| `ProfileEditor` | One profile, new or existing: header, toolbar, form/editor/tree, status bar |
 | `JsonEditor` · `JsonTree` | The two ways of viewing inputs |
-| `ComposeView` | Template pickers, the cards of generated fields, the preview dialog |
-| `FormField` | Every input control the composer can draw (see below) |
+| `TemplateForm` | The template pickers and the cards of fields they ask for |
+| `FormField` | Every input control the template form can draw (see below) |
 | `Sidebar` | Navigation, and the signed-in user |
 | `EditorToolbar` · `StatusBar` · `TagEditor` | The controls around the editor |
 | `LoginScreen` · `ConfirmDialog` · `ShortcutsDialog` · `Toasts` · `ErrorBoundary` | Sign-in and the overlays |

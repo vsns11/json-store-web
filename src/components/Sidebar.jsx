@@ -12,7 +12,6 @@ export default function Sidebar({
   user,
   onShowProfiles,
   onNewProfile,
-  onCompose,
   onRefresh,
   onToggleTheme,
   onShowShortcuts,
@@ -21,7 +20,6 @@ export default function Sidebar({
   const items = [
     { key: 'profiles', label: 'All profiles', icon: <Icon.Table />, onClick: onShowProfiles },
     { key: 'new', label: 'New profile', icon: <Icon.Plus />, onClick: onNewProfile },
-    { key: 'compose', label: 'New profile from template', icon: <Icon.Layers />, onClick: onCompose },
     { key: 'refresh', label: 'Refresh', icon: <Icon.Refresh />, onClick: onRefresh },
     {
       key: 'theme',
