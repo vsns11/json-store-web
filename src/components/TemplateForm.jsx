@@ -3,13 +3,23 @@ import FormField from './FormField.jsx'
 const NONE = ''
 
 /**
- * The template pickers and the fields they ask for: one dropdown per group, then a card of fields
- * for each chosen fragment. Used when composing a new profile and when editing one that was
- * composed earlier.
+ * The fields a template selection asks for: one card per chosen fragment, holding only the fields
+ * its body actually substitutes. The composer also shows the pickers above them; editing an
+ * existing profile does not, because its templates are already settled.
  */
-export default function TemplateForm({ catalog, selection, values, cards, invalidKeys = [], onSelect, onValue }) {
+export default function TemplateForm({
+  catalog,
+  selection,
+  values,
+  cards,
+  invalidKeys = [],
+  showPickers = true,
+  onSelect,
+  onValue,
+}) {
   return (
     <>
+      {showPickers && (
       <section className="compose-section">
         <h3 className="compose-heading">Templates</h3>
 
@@ -44,6 +54,7 @@ export default function TemplateForm({ catalog, selection, values, cards, invali
           })}
         </div>
       </section>
+      )}
 
       {cards.map((card) => (
         <section className="card" key={card.id}>

@@ -9,6 +9,25 @@
 
 const PLACEHOLDER = /\$\{([\w.]+)\}/g
 
+/**
+ * The field keys the selected bodies actually substitute. A field a body never mentions changes
+ * nothing, so it is not worth asking for, and is left out of the form.
+ */
+export function usedFieldKeys(catalog, selection) {
+  const keys = new Set()
+
+  const scan = (value) => {
+    if (typeof value === 'string') {
+      for (const match of value.matchAll(PLACEHOLDER)) keys.add(match[1])
+    } else if (value !== null && typeof value === 'object') {
+      Object.values(value).forEach(scan)
+    }
+  }
+
+  fragmentsFor(catalog, selection).forEach((fragment) => scan(fragment.body))
+  return keys
+}
+
 export function fragmentsFor(catalog, selection) {
   if (!catalog) return []
   return catalog.groups
@@ -18,23 +37,27 @@ export function fragmentsFor(catalog, selection) {
 
 /** Every field the current selection asks for, in order, without duplicates. */
 export function fieldsFor(catalog, selection) {
+  const used = usedFieldKeys(catalog, selection)
   const seen = new Set()
   return fragmentsFor(catalog, selection).flatMap((fragment) =>
     (fragment.fields ?? [])
-      .filter((field) => !seen.has(field.key) && seen.add(field.key))
+      .filter((field) => used.has(field.key) && !seen.has(field.key) && seen.add(field.key))
       .map((field) => ({ ...field, fragment: fragment.name })),
   )
 }
 
 /** Fields grouped by the fragment that asked for them — one card each in the composer. */
 export function fieldCards(catalog, selection) {
+  const used = usedFieldKeys(catalog, selection)
   const seen = new Set()
   return fragmentsFor(catalog, selection)
     .map((fragment) => ({
       id: fragment.id,
       name: fragment.name,
       description: fragment.description,
-      fields: (fragment.fields ?? []).filter((field) => !seen.has(field.key) && seen.add(field.key)),
+      fields: (fragment.fields ?? []).filter(
+        (field) => used.has(field.key) && !seen.has(field.key) && seen.add(field.key),
+      ),
     }))
     .filter((card) => card.fields.length > 0)
 }

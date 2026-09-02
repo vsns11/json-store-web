@@ -251,7 +251,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
                 values={template.values}
                 cards={cards}
                 invalidKeys={missing.map((field) => field.key)}
-                onSelect={(selection) => recompose(selection, template.values)}
+                showPickers={false}
                 onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
               />
             </div>

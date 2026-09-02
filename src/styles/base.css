@@ -220,14 +220,19 @@
   gap: 8px;
 }
 
+/* Along the top, clear of the actions in the status bar at the bottom of every view. */
 .toasts {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   z-index: 60;
+  /* The stack never swallows a click; the toasts themselves still take one to dismiss. */
+  pointer-events: none;
 }
 
 .toast {
@@ -235,6 +240,9 @@
   align-items: center;
   gap: 10px;
   min-width: 240px;
+  max-width: min(520px, 90vw);
+  pointer-events: auto;
+  cursor: pointer;
   padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -250,7 +258,7 @@
 .toast.is-info { border-left-color: var(--accent); }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: none; }
 }
 

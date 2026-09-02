@@ -29,10 +29,11 @@ saving brings you back to the table. Profiles are created, updated and deleted f
 
 **Three ways to work on a profile, two of them always available**
 
-- **Form** — only for profiles composed from templates. Editing one opens on this tab, showing the
-  templates it was built from and the values that were typed, ready to be changed. Changing anything
-  rebuilds the inputs from those templates; if they were edited by hand since, the form says so before
-  you overwrite that work.
+- **Form** — only for profiles composed from templates. Editing one opens on this tab, showing a card
+  per template it was built from, holding exactly the fields that template substitutes — the values
+  that were taken as input, and nothing else. The pickers are not repeated here: which templates were
+  used is settled, and each card is titled with its own. Changing a field rebuilds the inputs from
+  those templates; if they were edited by hand since, the form says so before you overwrite that work.
 
 - **Editor** — a syntax-coloured editor: keys, strings, numbers, booleans and punctuation are coloured
   as you type, with line numbers, `Tab` indentation, and live validation that reports the exact line and
@@ -180,6 +181,9 @@ template becomes a card of its own fields, so a fragment's inputs stay together 
 | `checkbox` | Single checkbox | boolean | `checkboxLabel` |
 | `checkboxes` | Checkbox group | array of strings | `options` |
 | `tags` | Free-form list | array of strings | `placeholder` |
+
+A field is only shown if the fragment bodies actually substitute it — a `${key}` that appears nowhere
+changes nothing, so it is never asked for.
 
 Every type also takes `label`, `key`, `default`, `required` and `help`. `options` are plain strings, or
 `{ value, label }` when the stored value should differ from what is shown.
