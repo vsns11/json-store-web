@@ -53,28 +53,56 @@ so adding fragments is a configuration change on that side.
 - Sign-in against the directory the API is pointed at; the session token lives in the tab only
 - `⌘/Ctrl+S` save · `⌘/Ctrl+⇧F` format · `⌘/Ctrl+K` search
 
-## Signing in
+## Getting started
+
+### What you need
+
+| Path | Needs |
+| --- | --- |
+| Development | Node 20 or newer, and the API running (see the `json-store-api` repository) |
+| Container | Docker Desktop, or Docker Engine with Compose v2 |
+
+### Development
+
+```bash
+git clone <this-repo> json-store-web
+cd json-store-web
+npm install
+npm run dev
+```
+
+Open <http://localhost:5173>. The dev server proxies `/api` to `localhost:8080`, so the browser only
+ever talks to one origin and there is no CORS to think about. If the API is somewhere else:
+
+```bash
+API_URL=https://api.example.com npm run dev
+```
+
+### Container
+
+```bash
+cp .env.example .env      # then set API_BASE_URL if the API is not on localhost:8080
+docker compose up -d --build
+```
+
+Open <http://localhost:3000>. Stop it with `docker compose down`.
+
+### Signing in
 
 The API authenticates against LDAP and answers with a bearer token, which this app keeps in
-`sessionStorage` for the tab. When the API is running locally with its built-in directory, sign in as
-`alice / secret` (may delete profiles) or `bob / secret` (may not). A rejected or expired token drops
-you back to the sign-in screen automatically.
+`sessionStorage` for the tab. Against the API's own local directory, sign in as `alice / secret` (may
+delete profiles) or `bob / secret` (may not). A rejected or expired token returns you to the sign-in
+screen.
 
-## Run it
+### If something does not work
 
-**Development** — proxies `/api` to `localhost:8080`, so there is no CORS to think about:
-
-```bash
-npm install && npm run dev
-```
-
-Point it at an API somewhere else with `API_URL=https://api.example.com npm run dev`.
-
-**Container**:
-
-```bash
-docker compose up -d --build          # http://localhost:3000
-```
+| Symptom | Cause and fix |
+| --- | --- |
+| Sign-in says the API cannot be reached | The API is not running, or `API_BASE_URL` points somewhere else. Check `curl localhost:8080/api/auth/login` |
+| Sign-in works but every request then fails | The API is on another origin and does not allow this one: add it to `CORS_ORIGINS` there |
+| `Port 5173 is in use` | Another Vite server is running: `npm run dev -- --port 5174` |
+| The page loads but nothing appears | Look at `config.js` in the browser: it should hold the API address the container was given |
+| Changes do not show after a rebuild | Hard-reload once; `index.html` and `config.js` are sent with `no-store`, hashed assets are cached forever |
 
 ## Configuration
 
