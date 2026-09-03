@@ -173,7 +173,7 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
       return
     }
     if (!draft.name.trim()) {
-      toasts.error('Give the document a name before saving')
+      toasts.error('Give the profile a name before saving')
       return
     }
 
