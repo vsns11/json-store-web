@@ -41,11 +41,11 @@ const EMPTY_TEMPLATE = { selection: {}, values: {} }
 const hasSelection = (template) => Object.values(template?.selection ?? {}).some(Boolean)
 
 /**
- * Which of the three tabs can actually be drawn. The form needs a template behind it and the tree
- * needs inputs that parse, so either can fall back to the editor.
+ * Which of the three tabs can actually be drawn. The form is always available — without a template
+ * behind it, it offers the pickers — but the tree needs inputs that parse.
  */
-function chooseView(chosen, template, parses) {
-  if (chosen === 'form' && template) return 'form'
+function chooseView(chosen, parses) {
+  if (chosen === 'form') return 'form'
   if (chosen === 'tree' && parses) return 'tree'
   return 'code'
 }
@@ -71,7 +71,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   // A profile composed from templates remembers its selection, and can be edited as that form again.
   // Older ones do not, so their selection is worked out from the inputs instead.
   const isNew = !saved
-  const [template, setTemplate] = useState(saved?.template ?? (isNew ? EMPTY_TEMPLATE : null))
+  const [template, setTemplate] = useState(saved?.template ?? EMPTY_TEMPLATE)
   const [inferred, setInferred] = useState(false)
   const [catalog, setCatalog] = useState(null)
   const [view, setView] = useState(isNew || saved?.template ? 'form' : 'code')
@@ -103,7 +103,9 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   const shape = useMemo(() => (parsed.ok ? describeShape(parsed.value) : null), [parsed])
   const dirty = snapshot(draft) !== baseline
   // The tree needs something that parses; anything else falls back to the editor.
-  const effectiveView = chooseView(view, template, parsed.ok)
+  const effectiveView = chooseView(view, parsed.ok)
+  // A profile is governed by templates once something is picked; until then the form offers them.
+  const governed = hasSelection(template)
 
   const cards = useMemo(
     () => (catalog && template ? fieldCards(catalog, template.selection) : []),
@@ -116,7 +118,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
 
   // jsonb does not preserve key order, so the comparison has to ignore it.
   const matchesTemplate = useMemo(() => {
-    if (!catalog || !template) return true
+    if (!catalog || !hasSelection(template)) return true
     if (invalid.length > 0) return true
     const fromTemplate = JSON.stringify(compose(catalog, template.selection, template.values).payload)
     return sortJsonKeys(fromTemplate).text === sortJsonKeys(JSON.stringify(toPayload(draft.documents))).text
@@ -268,7 +270,6 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         view={effectiveView}
         onViewChange={setView}
         canFormat={parsed.ok}
-        canUseForm={isNew || Boolean(template)}
         onFormat={() => transform(formatJson)}
         onMinify={() => transform(minifyJson)}
         onSortKeys={() => transform(sortJsonKeys)}
@@ -318,17 +319,24 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         {effectiveView === 'form' ? (
           catalog ? (
             <div className="template-form">
-              {inferred ? (
+              {governed && inferred ? (
                 <p className="notice notice-info">
                   This profile was saved before its templates were recorded, so the fields below were
                   matched to the inputs. Changing one rebuilds the inputs from the templates — which may
                   add fields the templates define — and saving records the match.
                 </p>
-              ) : (
+              ) : governed ? (
                 !matchesTemplate && (
                   <p className="notice">
                     These inputs have been edited by hand since they were composed. Changing a field here
                     rebuilds them from the templates, and those edits will be lost.
+                  </p>
+                )
+              ) : (
+                !isNew && (
+                  <p className="notice">
+                    This profile was written by hand. Picking a template below rebuilds its inputs from
+                    that template, replacing what is there now — the Editor tab keeps them as they are.
                   </p>
                 )
               )}
@@ -338,7 +346,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
                 values={template.values}
                 cards={cards}
                 invalidKeys={missing.map((field) => field.key)}
-                showPickers={isNew}
+                showPickers={!governed}
                 onSelect={(selection) => recompose(selection, template.values)}
                 onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
               />

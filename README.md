@@ -31,8 +31,8 @@ saving brings you back to the table. Profiles are created, updated and deleted f
 
 **Three ways to work on a profile, two of them always available**
 
-- **Form** — for profiles that came from templates. Editing one opens on this tab, showing a card per
-  template it was built from, holding exactly the fields that template substitutes — the values that
+- **Form** — always available. For a profile that came from templates it opens on this tab, showing a
+  card per template it was built from, holding exactly the fields that template substitutes — the values that
   were taken as input, and nothing else. The pickers are not repeated here: which templates were used
   is settled, and each card is titled with its own. Changing a field rebuilds the inputs from those
   templates; if they were edited by hand since, the form says so before you overwrite that work.
