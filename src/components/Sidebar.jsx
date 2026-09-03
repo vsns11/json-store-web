@@ -9,13 +9,11 @@ export default function Sidebar({
   expanded,
   activeItem,
   theme,
-  user,
   onShowProfiles,
   onNewProfile,
   onRefresh,
   onToggleTheme,
   onShowShortcuts,
-  onSignOut,
 }) {
   const items = [
     { key: 'profiles', label: 'All profiles', icon: <Icon.Table />, onClick: onShowProfiles },
@@ -46,18 +44,6 @@ export default function Sidebar({
         ))}
       </nav>
 
-      <footer className="side-footer">
-        {user && (
-          <div className="side-user">
-            <span className="side-user-name" title={`Roles: ${user.roles.join(', ') || 'none'}`}>
-              {user.username}
-            </span>
-            <button className="side-signout" onClick={onSignOut} title="Sign out">
-              <Icon.SignOut /> Sign out
-            </button>
-          </div>
-        )}
-      </footer>
     </aside>
   )
 }

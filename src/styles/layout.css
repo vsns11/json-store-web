@@ -39,6 +39,21 @@
   font-weight: 700;
 }
 
+/* Who is signed in, at the left with the brand. */
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-left: 14px;
+  margin-left: 6px;
+  border-left: 1px solid var(--border);
+}
+
+.topbar-user-name {
+  font-size: 12.5px;
+  font-weight: 550;
+}
+
 .topbar-stats {
   display: flex;
   gap: 18px;
@@ -102,7 +117,6 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   width: 58px;
   padding: 12px 8px;
   background: var(--surface);
@@ -159,26 +173,7 @@
   opacity: 1;
 }
 
-.side-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  color: var(--text-faint);
-  font-size: 11px;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.12s ease;
-}
 
-.sidebar.is-expanded .side-footer {
-  opacity: 1;
-}
-
-.side-footer span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 @media (max-width: 940px) {
   .workspace {
@@ -186,7 +181,22 @@
     grid-template-rows: minmax(180px, 34%) 1fr;
   }
 
-  .topbar-stats {
+  /* Who is signed in, at the left with the brand. */
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-left: 14px;
+  margin-left: 6px;
+  border-left: 1px solid var(--border);
+}
+
+.topbar-user-name {
+  font-size: 12.5px;
+  font-weight: 550;
+}
+
+.topbar-stats {
     display: none;
   }
 }

@@ -81,6 +81,7 @@ filled in — the templates chosen and the values typed — rather than only the
 - Full-text search across names, descriptions, tags and the inputs themselves
 - Name, description and up to 12 tags per profile
 - A sidebar that expands and collapses in place, light and dark themes
+- The signed-in user sits top left, beside the brand; creating a profile lives in the sidebar
 - Sign-in against the directory the API is pointed at; the session token lives in the tab only
 - `⌘/Ctrl+S` save · `⌘/Ctrl+⇧F` format · `⌘/Ctrl+K` search
 
@@ -224,7 +225,8 @@ Components map one-to-one onto what you see, and each takes plain props with no 
 | `JsonEditor` · `JsonTree` | The two ways of viewing inputs |
 | `TemplateForm` | The template pickers and the cards of fields they ask for |
 | `FormField` | Every input control the template form can draw (see below) |
-| `Sidebar` | Navigation, and the signed-in user |
+| `Sidebar` | Navigation |
+| `TopBar` | Brand, the signed-in user, store totals and search |
 | `EditorToolbar` · `StatusBar` · `TagEditor` | The controls around the editor |
 | `LoginScreen` · `ConfirmDialog` · `ShortcutsDialog` · `Toasts` · `ErrorBoundary` | Sign-in and the overlays |
 

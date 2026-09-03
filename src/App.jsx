@@ -160,6 +160,8 @@ export default function App() {
     <div className="app">
       <TopBar
         stats={stats}
+        user={user}
+        onSignOut={signOut}
         search={query.search}
         searchRef={searchRef}
         menuExpanded={sidebarExpanded}
@@ -168,7 +170,6 @@ export default function App() {
           setView('table')
           update({ search: value })
         }}
-        onNewProfile={startNewProfile}
       />
 
       <div className="workspace">
@@ -176,13 +177,11 @@ export default function App() {
           expanded={sidebarExpanded}
           activeItem={railSelection(view, selected)}
           theme={theme}
-          user={user}
           onShowProfiles={showProfiles}
           onNewProfile={startNewProfile}
           onRefresh={refresh}
           onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           onShowShortcuts={() => setShowShortcuts(true)}
-          onSignOut={signOut}
         />
 
         <main className="content">

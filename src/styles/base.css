@@ -520,6 +520,13 @@
   letter-spacing: 0.02em;
 }
 
+.monogram-sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 10px;
+}
+
 .json-snippet {
   font-family: var(--mono);
 }

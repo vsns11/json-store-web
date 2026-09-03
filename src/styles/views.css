@@ -754,30 +754,3 @@
   font-family: var(--mono);
 }
 
-.side-user {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.side-user-name {
-  color: var(--text);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-.side-signout {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.side-signout:hover {
-  color: var(--danger);
-}
