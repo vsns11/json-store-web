@@ -27,7 +27,7 @@ export default function DocumentTabs({ names, active, invalid, onSelect, onAdd, 
         ),
       )}
 
-      <button className="doc-tab doc-tab-add" onClick={onAdd} title="Add a document for another system">
+      <button className="doc-tab doc-tab-add" onClick={onAdd} title="Add another system">
         <Icon.Plus />
       </button>
     </div>
@@ -52,7 +52,7 @@ function ActiveTab({ name, siblings, invalid, canRemove, onRename, onRemove }) {
         className="doc-tab-name"
         value={draft}
         size={Math.max(draft.length, 4)}
-        aria-label="Document name"
+        aria-label="System name"
         onChange={(event) => change(event.target.value)}
         onBlur={() => setDraft(name)}
         onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.target.blur()}

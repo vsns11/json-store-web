@@ -10,6 +10,10 @@ export default defineConfig({
       '/api': {
         target: process.env.API_URL ?? 'http://localhost:8080',
         changeOrigin: true,
+        // The browser only ever sees one origin here, so drop the Origin header the
+        // browser adds. Without this the API's CORS allow-list would have to name
+        // whichever port the dev server happened to start on.
+        configure: (proxy) => proxy.on('proxyReq', (request) => request.removeHeader('origin')),
       },
     },
   },

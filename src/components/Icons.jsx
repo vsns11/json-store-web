@@ -43,6 +43,11 @@ export const Icon = {
       <path d="M12 3v18" />
     </svg>
   ),
+  Check: (props) => (
+    <svg {...base} {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </svg>
+  ),
   Copy: (props) => (
     <svg {...base} {...props}>
       <rect x="9" y="9" width="11" height="11" rx="2" />

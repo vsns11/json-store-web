@@ -1,7 +1,35 @@
+import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
-import { formatBytes } from '../lib/json.js'
+import { formatBytes, formatRelativeTime } from '../lib/json.js'
 
-export default function StatusBar({ parsed, shape, size, dirty, saving, isNew, onSave, onRevert, onDelete, onJumpToError }) {
+// "Saved just now" would stay "just now" forever without a nudge, so re-render
+// the label every half minute for as long as there is one to show.
+function useTick(active) {
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    if (!active) return undefined
+    const timer = setInterval(() => setTick((count) => count + 1), 30_000)
+    return () => clearInterval(timer)
+  }, [active])
+}
+
+export default function StatusBar({
+  parsed,
+  shape,
+  size,
+  dirty,
+  saving,
+  isNew,
+  savedAt,
+  onSave,
+  onReload,
+  onRevert,
+  onDelete,
+  onJumpToError,
+}) {
+  useTick(Boolean(savedAt) && !dirty)
+
   return (
     <footer className="statusbar">
       <span className={`status-pill ${parsed.ok ? 'is-valid' : parsed.empty ? 'is-empty' : 'is-invalid'}`}>
@@ -26,13 +54,25 @@ export default function StatusBar({ parsed, shape, size, dirty, saving, isNew, o
       )}
 
       <div className="status-actions">
-        {dirty && (
-          <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+        {dirty ? (
+          <span className="save-state is-unsaved">
             <span className="unsaved-dot" /> Unsaved changes
           </span>
+        ) : (
+          savedAt && (
+            <span className="save-state is-saved">
+              <Icon.Check /> Saved {formatRelativeTime(savedAt)}
+            </span>
+          )
+        )}
+
+        {onReload && (
+          <button className="btn btn-sm" onClick={onReload} title="Discard local edits and load the stored version">
+            <Icon.Refresh /> Load stored
+          </button>
         )}
         {!isNew && (
-          <button className="btn btn-sm btn-danger" onClick={onDelete} title="Delete this document">
+          <button className="btn btn-sm btn-danger" onClick={onDelete} title="Delete this profile">
             <Icon.Trash /> Delete
           </button>
         )}

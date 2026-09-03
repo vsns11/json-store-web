@@ -37,18 +37,27 @@
 
 /* Fixed widths for everything except the name, so rows keep their rhythm and the
    actions never get squeezed off the edge. */
-.table th:nth-child(2) { width: 150px; }
-.table th:nth-child(3) { width: 150px; }
-.table th:nth-child(4) { width: 92px; }
+.table th:nth-child(2) { width: 152px; }
+.table th:nth-child(3) { width: 148px; }
+.table th:nth-child(4) { width: 84px; }
 .table th:nth-child(5),
-.table th:nth-child(6) { width: 118px; }
-.table th:nth-child(7) { width: 150px; }
+.table th:nth-child(6) { width: 108px; }
+.table th:nth-child(7) { width: 142px; }
+
+/* On a narrow window the created date is the first thing worth giving up:
+   the updated column already answers "is this fresh?". */
+@media (max-width: 1180px) {
+  .table th:nth-child(5),
+  .table td:nth-child(5) {
+    display: none;
+  }
+}
 
 .table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 9px 16px;
+  padding: 9px 12px;
   background: var(--surface-sunken);
   border-bottom: 1px solid var(--border);
   color: var(--text-faint);
@@ -80,7 +89,7 @@
 }
 
 .table td {
-  padding: 10px 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -132,8 +141,23 @@
 
 .cell-tags {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 5px;
+  align-items: center;
+  gap: 5px;
+  /* One line, always: a scenario can feed six systems and carry as many tags.
+     Whatever does not fit ellipsises, so a clipped pill still reads as a word. */
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.cell-tags > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cell-tags > .doc-pill-more,
+.cell-tags > .tag-more {
+  flex: none;
 }
 
 .cell-mono {
@@ -205,6 +229,11 @@
 
 .doc-pill-more {
   border-style: dashed;
+}
+
+/* "+3" after the tags that fitted. */
+.tag-more {
+  color: var(--text-faint);
 }
 
 .tag-button {
@@ -727,6 +756,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Saved or not, said plainly next to the buttons rather than in a toast. */
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.save-state.is-unsaved {
+  color: var(--text-muted);
+}
+
+.save-state.is-saved {
+  color: var(--success);
 }
 
 .status-actions {

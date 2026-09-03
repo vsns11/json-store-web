@@ -201,13 +201,14 @@ export default function App() {
           ) : (
             <ProfileEditor
               key={editorKey}
-              document={selected}
+              profile={selected}
               onDirtyChange={setEditorDirty}
               onBack={showProfiles}
-              onSaved={() => {
+              onSaved={(profile) => {
+                // Stay on the profile that was just saved; only the list behind it needs refreshing.
                 setEditorDirty(false)
+                setSelected(profile)
                 refresh()
-                setView('table')
               }}
               onDeleted={() => {
                 setEditorDirty(false)

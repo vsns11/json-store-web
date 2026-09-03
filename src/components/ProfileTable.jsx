@@ -16,7 +16,9 @@ const COLUMNS = [
 const PAGE_SIZES = [15, 30, 50]
 
 /** A scenario can feed half a dozen systems; the row shows two and counts the rest. */
-function SystemPills({ names, shown = 2 }) {
+// One name plus a count: enough to recognise the profile, narrow enough that every
+// row stays a single line. The full list is in the tooltip and in the editor.
+function SystemPills({ names, shown = 1 }) {
   if (names.length === 0) return <span className="muted">—</span>
 
   return (
@@ -154,22 +156,28 @@ export default function ProfileTable({
                     <SystemPills names={item.documents ?? []} />
                   </td>
                   <td>
-                    <span className="cell-tags">
-                      {item.tags.length === 0 && <span className="muted">—</span>}
-                      {item.tags.map((tag) => (
-                        <button
-                          key={tag}
-                          className={`tag tag-button ${tintClass(tag)}`}
-                          title={`Show only profiles tagged ${tag}`}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onQueryChange({ tag })
-                          }}
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </span>
+                    {item.tags.length === 0 ? (
+                      <span className="muted">—</span>
+                    ) : (
+                      <span className="cell-tags" title={item.tags.join(', ')}>
+                        {item.tags.slice(0, 1).map((tag) => (
+                          <button
+                            key={tag}
+                            className={`tag tag-button ${tintClass(tag)}`}
+                            title={`Show only profiles tagged ${tag}`}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              onQueryChange({ tag })
+                            }}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                        {item.tags.length > 1 && (
+                          <span className="tag tag-more">+{item.tags.length - 1}</span>
+                        )}
+                      </span>
+                    )}
                   </td>
                   <td className="is-right">
                     <span className="cell-size">

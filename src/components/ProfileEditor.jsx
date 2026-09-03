@@ -50,31 +50,40 @@ function chooseView(chosen, parses) {
   return 'code'
 }
 
+/** The editable form of a stored profile: its details plus one text document per system. */
+function draftOf(profile) {
+  return {
+    name: profile?.name ?? '',
+    description: profile?.description ?? '',
+    tags: profile?.tags ?? [],
+    // One document per system this profile feeds, held as text while it is being edited.
+    documents: toTexts(profile?.payload),
+  }
+}
+
 /**
- * Edits one document. Mounted with a key of the document id, so switching
- * documents always starts from a clean draft.
+ * Edits one profile. Mounted with a key, so opening another profile always
+ * starts from a clean draft.
  */
-export default function ProfileEditor({ document: saved, onSaved, onDeleted, onBack, onDirtyChange }) {
+export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onBack, onDirtyChange }) {
   const toasts = useToasts()
+  // The profile as the server last stored it. Saving a new profile fills this in, so the editor
+  // carries on editing what it just created rather than creating it again.
+  const [saved, setSaved] = useState(opened)
+  const [savedAt, setSavedAt] = useState(null)
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
 
-  const [draft, setDraft] = useState(() => ({
-    name: saved?.name ?? '',
-    description: saved?.description ?? '',
-    tags: saved?.tags ?? [],
-    // One document per system this profile feeds, held as text while it is being edited.
-    documents: toTexts(saved?.payload),
-  }))
-  const [active, setActive] = useState(() => Object.keys(toTexts(saved?.payload))[0])
+  const [draft, setDraft] = useState(() => draftOf(opened))
+  const [active, setActive] = useState(() => Object.keys(toTexts(opened?.payload))[0])
   const [baseline, setBaseline] = useState(() => snapshot(draft))
   // A profile composed from templates remembers its selection, and can be edited as that form again.
   // Older ones do not, so their selection is worked out from the inputs instead.
   const isNew = !saved
-  const [template, setTemplate] = useState(saved?.template ?? EMPTY_TEMPLATE)
+  const [template, setTemplate] = useState(opened?.template ?? EMPTY_TEMPLATE)
   const [inferred, setInferred] = useState(false)
   const [catalog, setCatalog] = useState(null)
-  const [view, setView] = useState(isNew || saved?.template ? 'form' : 'code')
+  const [view, setView] = useState(!opened || opened.template ? 'form' : 'code')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [comparing, setComparing] = useState(false)
@@ -84,8 +93,8 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
     loadCatalog()
       .then((loaded) => {
         setCatalog(loaded)
-        if (saved && !saved.template) {
-          const match = inferTemplate(loaded, saved.payload)
+        if (opened && !opened.template) {
+          const match = inferTemplate(loaded, opened.payload)
           if (match) {
             setTemplate(match)
             setInferred(true)
@@ -178,13 +187,30 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         template: hasSelection(template) ? template : null,
       }
       const result = isNew ? await api.create(body) : await api.update(saved.id, body)
+      setSaved(result)
+      setSavedAt(new Date())
       setBaseline(snapshot(draft))
-      toasts.success(isNew ? `Stored “${result.name}”` : `Saved “${result.name}”`)
       onSaved(result)
     } catch (error) {
       toasts.error(error.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  /** Throws away local edits and loads the profile as it is stored. */
+  const reload = async () => {
+    try {
+      const stored = await api.get(saved.id)
+      const fresh = draftOf(stored)
+      setSaved(stored)
+      setDraft(fresh)
+      setBaseline(snapshot(fresh))
+      setTemplate(stored.template ?? EMPTY_TEMPLATE)
+      setActive(Object.keys(fresh.documents)[0])
+      toasts.info('Loaded the stored version')
+    } catch (failure) {
+      toasts.error(failure.message)
     }
   }
 
@@ -378,6 +404,8 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         dirty={dirty}
         saving={saving}
         isNew={isNew}
+        savedAt={savedAt}
+        onReload={saved ? reload : null}
         onSave={save}
         onRevert={() => {
           setDraft(JSON.parse(baseline))
