@@ -43,10 +43,14 @@ saving brings you back to the table. Profiles are created, updated and deleted f
   match, and saving records what was matched. Inputs that match nothing, like a document written by
   hand, get no form rather than a guess.
 
-A profile's inputs are a **set of named documents**, one per system the scenario feeds — an orders
-API, a payment system, a set of assertions. The editor shows a tab per document; the name is editable
-in place, and `+` adds another. One form fills them all: each template fragment names the system it
-contributes to.
+A profile's inputs are a **set of named documents**, one per system the scenario feeds. The editor
+shows a tab per document; the name is editable in place, and `+` adds another.
+
+One form fills them all. A single fragment writes into every system it names, so choosing *Checkout*,
+*Returning customer*, *Card — declined*, *Stock reserved*, *Email and SMS* and *Expect failure* produces
+six documents — an orders API request, a payment charge, an inventory reservation, a Kafka event, the
+notifications to expect and the assertions — from one set of fields. A value typed once reaches every
+document that mentions it.
 
 - **Editor** — a syntax-coloured editor: keys, strings, numbers, booleans and punctuation are coloured
   as you type, with line numbers, `Tab` indentation, and live validation that reports the exact line and

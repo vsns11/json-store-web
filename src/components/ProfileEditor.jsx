@@ -104,7 +104,8 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   const dirty = snapshot(draft) !== baseline
   // The tree needs something that parses; anything else falls back to the editor.
   const effectiveView = chooseView(view, parsed.ok)
-  // A profile is governed by templates once something is picked; until then the form offers them.
+  // An existing profile is governed by templates once it has a selection; its pickers are then
+  // settled and hidden. While creating one, they stay on screen so the rest can be chosen.
   const governed = hasSelection(template)
 
   const cards = useMemo(
@@ -346,7 +347,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
                 values={template.values}
                 cards={cards}
                 invalidKeys={missing.map((field) => field.key)}
-                showPickers={!governed}
+                showPickers={isNew || !governed}
                 onSelect={(selection) => recompose(selection, template.values)}
                 onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
               />

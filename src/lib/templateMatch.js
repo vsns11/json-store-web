@@ -40,14 +40,16 @@ export function inferTemplate(catalog, payload) {
 }
 
 /**
- * Tries the document the fragment feeds, then every other one. Profiles stored before inputs were
- * split per system keep everything in a single document, and they should still get their form.
+ * A fragment matches when every document it writes is found in the inputs. The document it named is
+ * tried first; failing that, any of them, because profiles stored before inputs were split per
+ * system keep everything in one document and should still get their form.
  */
 function matchesAnyDocument(fragment, payload, found) {
-  const target = payload[fragment.target ?? 'main']
-  if (target !== undefined && matches(fragment.body, target, found)) return true
-
-  return Object.values(payload).some((document) => matches(fragment.body, document, found))
+  return Object.entries(fragment.documents ?? {}).every(([system, body]) => {
+    const named = payload[system]
+    if (named !== undefined && matches(body, named, found)) return true
+    return Object.values(payload).some((document) => matches(body, document, found))
+  })
 }
 
 function matches(body, value, found) {

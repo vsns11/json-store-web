@@ -24,7 +24,9 @@ export function usedFieldKeys(catalog, selection) {
     }
   }
 
-  fragmentsFor(catalog, selection).forEach((fragment) => scan(fragment.body))
+  fragmentsFor(catalog, selection).forEach((fragment) =>
+    Object.values(fragment.documents ?? {}).forEach(scan),
+  )
   return keys
 }
 
@@ -90,14 +92,15 @@ export function compose(catalog, selection, values) {
 }
 
 /**
- * The documents a selection builds, keyed by the system each fragment targets. A scenario that
- * feeds an API and a payment system produces one document for each.
+ * The documents a selection builds, one per system. A fragment writes into every system it names,
+ * so choosing a single scenario can already produce an API request, an event and its assertions.
  */
 export function composeDocument(catalog, selection, values) {
   const documents = {}
   for (const fragment of fragmentsFor(catalog, selection)) {
-    const target = fragment.target ?? 'main'
-    documents[target] = deepMerge(documents[target] ?? {}, substitute(fragment.body, values))
+    for (const [system, body] of Object.entries(fragment.documents ?? {})) {
+      documents[system] = deepMerge(documents[system] ?? {}, substitute(body, values))
+    }
   }
   return documents
 }
