@@ -16,13 +16,12 @@ import { inferTemplate } from '../lib/templateMatch.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import CompareDialog from './CompareDialog.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import { Icon } from './Icons.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
 import JsonEditor from './JsonEditor.jsx'
 import JsonTree from './JsonTree.jsx'
+import ProfileHeader from './ProfileHeader.jsx'
 import TemplateForm from './TemplateForm.jsx'
 import StatusBar from './StatusBar.jsx'
-import TagEditor from './TagEditor.jsx'
 
 const snapshot = (draft) => JSON.stringify(draft)
 
@@ -32,10 +31,20 @@ const EMPTY_TEMPLATE = { selection: {}, values: {} }
 const hasSelection = (template) => Object.values(template?.selection ?? {}).some(Boolean)
 
 /**
+ * Which of the three tabs can actually be drawn. The form needs a template behind it and the tree
+ * needs inputs that parse, so either can fall back to the editor.
+ */
+function chooseView(chosen, template, parses) {
+  if (chosen === 'form' && template) return 'form'
+  if (chosen === 'tree' && parses) return 'tree'
+  return 'code'
+}
+
+/**
  * Edits one document. Mounted with a key of the document id, so switching
  * documents always starts from a clean draft.
  */
-export default function ProfileEditor({ document: saved, onSaved, onDeleted, onBack }) {
+export default function ProfileEditor({ document: saved, onSaved, onDeleted, onBack, onDirtyChange }) {
   const toasts = useToasts()
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
@@ -79,7 +88,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
   const shape = useMemo(() => (parsed.ok ? describeShape(parsed.value) : null), [parsed])
   const dirty = snapshot(draft) !== baseline
   // The tree needs something that parses; anything else falls back to the editor.
-  const effectiveView = view === 'form' && template ? 'form' : view === 'tree' && parsed.ok ? 'tree' : 'code'
+  const effectiveView = chooseView(view, template, parsed.ok)
 
   const cards = useMemo(
     () => (catalog && template ? fieldCards(catalog, template.selection) : []),
@@ -190,11 +199,22 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
     input.setSelectionRange(position, position + 1)
   }
 
+  // Anything that navigates away needs to know there is unsaved work to warn about.
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+    return () => onDirtyChange?.(false)
+  }, [dirty, onDirtyChange])
+
   // Keyboard shortcuts read the latest handlers through a ref, so the listener is bound once.
   const latest = useRef({})
-  latest.current = { save, format: () => transform(formatJson) }
+  latest.current = { save, format: () => transform(formatJson), back: onBack }
   useEffect(() => {
     const onKeyDown = (event) => {
+      // Esc goes back to the table, unless a dialog is open and wants it first.
+      if (event.key === 'Escape' && !window.document.querySelector('.overlay')) {
+        latest.current.back?.()
+        return
+      }
       if (!(event.metaKey || event.ctrlKey)) return
       const key = event.key.toLowerCase()
       if (key === 's') {
@@ -211,30 +231,13 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
 
   return (
     <section className="panel">
-      <header className="editor-header">
-        <div className="header-row">
-          <button className="btn btn-ghost back-button" onClick={onBack} title="Back to all documents">
-            <Icon.Back /> All profiles
-          </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <input
-              className="title-input"
-              value={draft.name}
-              placeholder="Name this scenario"
-              maxLength={120}
-              onChange={(event) => patch({ name: event.target.value })}
-            />
-            <input
-              className="description-input"
-              value={draft.description}
-              placeholder="What this scenario covers…"
-              maxLength={500}
-              onChange={(event) => patch({ description: event.target.value })}
-            />
-          </div>
-        </div>
-        <TagEditor tags={draft.tags} onChange={(tags) => patch({ tags })} />
-      </header>
+      <ProfileHeader
+        name={draft.name}
+        description={draft.description}
+        tags={draft.tags}
+        onChange={patch}
+        onBack={onBack}
+      />
 
       <EditorToolbar
         view={effectiveView}

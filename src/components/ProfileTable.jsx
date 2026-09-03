@@ -12,7 +12,20 @@ const COLUMNS = [
 ]
 
 /** Every stored profile at a glance. Editing starts from a row. */
-export default function ProfileTable({ query, onQueryChange, page, loading, error, onRetry, onOpen, onDuplicate, onDelete }) {
+const PAGE_SIZES = [15, 30, 50]
+
+export default function ProfileTable({
+  query,
+  onQueryChange,
+  page,
+  loading,
+  error,
+  onRetry,
+  onNew,
+  onOpen,
+  onDuplicate,
+  onDelete,
+}) {
   const { items, totalItems, totalPages } = page
   // The size bar is relative to the largest profile on this page, so it always says something.
   const largest = Math.max(1, ...items.map((item) => item.sizeBytes))
@@ -87,9 +100,16 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
                 <tr>
                   <td colSpan={6}>
                     <div className="table-message">
-                      <p className="muted">
-                        {query.search ? `Nothing matches “${query.search}”` : 'No profiles stored yet'}
-                      </p>
+                      {query.search || query.tag ? (
+                        <p className="muted">Nothing matches what you are looking for.</p>
+                      ) : (
+                        <>
+                          <p className="muted">No profiles yet. A profile is a named set of inputs a test scenario runs with.</p>
+                          <button className="btn btn-primary btn-sm" onClick={onNew}>
+                            <Icon.Plus /> Create the first one
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -161,8 +181,23 @@ export default function ProfileTable({ query, onQueryChange, page, loading, erro
         )}
       </div>
 
-      {totalPages > 1 && (
+      {(totalPages > 1 || totalItems > PAGE_SIZES[0]) && (
         <footer className="table-footer">
+          <label className="table-jump">
+            Rows
+            <select
+              className="input"
+              value={query.size}
+              onChange={(event) => onQueryChange({ size: Number(event.target.value) })}
+            >
+              {PAGE_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {/* With thousands of pages, stepping one at a time is not navigation: the number is typeable. */}
           <label className="table-jump">
             Page

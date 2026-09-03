@@ -12,6 +12,15 @@ import { useAuth } from './hooks/useAuth.jsx'
 import { useProfiles } from './hooks/useProfiles.js'
 import { useToasts } from './hooks/useToasts.jsx'
 
+/**
+ * Which sidebar entry is highlighted. Editing an existing profile is reached from the table rather
+ * than the rail, so nothing is marked then.
+ */
+function railSelection(view, selected) {
+  if (view !== 'editor') return 'profiles'
+  return selected ? '' : 'new'
+}
+
 export default function App() {
   const { user, status, signIn, signOut } = useAuth()
   const toasts = useToasts()
@@ -23,6 +32,9 @@ export default function App() {
   const [editorKey, setEditorKey] = useState('new')
   const [pendingDelete, setPendingDelete] = useState(null)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  // Set while the editor holds unsaved work, so leaving can ask first.
+  const [editorDirty, setEditorDirty] = useState(false)
+  const [pendingLeave, setPendingLeave] = useState(null)
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
   const [sidebarExpanded, setSidebarExpanded] = useState(() => localStorage.getItem('sidebar') !== 'collapsed')
 
@@ -47,7 +59,26 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const openProfile = async (id) => {
+  // Closing the tab with unsaved work gets the browser's own warning.
+  useEffect(() => {
+    if (!editorDirty) return undefined
+    const warn = (event) => event.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [editorDirty])
+
+  /**
+   * Runs an action that leaves the editor. With unsaved work it asks first and remembers what was
+   * being attempted, so answering the question carries on where it left off.
+   */
+  const leaveEditor = (action) => {
+    if (view === 'editor' && editorDirty) setPendingLeave(() => action)
+    else action()
+  }
+
+  const openProfile = (id) => leaveEditor(() => loadProfile(id))
+
+  const loadProfile = async (id) => {
     try {
       const profile = await api.get(id)
       setSelected(profile)
@@ -58,19 +89,24 @@ export default function App() {
     }
   }
 
-  const startNewProfile = () => {
-    setSelected(null)
-    setEditorKey(`new-${Date.now()}`)
-    setView('editor')
-  }
+  const startNewProfile = () =>
+    leaveEditor(() => {
+      setSelected(null)
+      setEditorKey(`new-${Date.now()}`)
+      setView('editor')
+    })
 
-  const showProfiles = () => {
-    setView('table')
-    refresh()
-  }
+  const showProfiles = () =>
+    leaveEditor(() => {
+      setEditorDirty(false)
+      setView('table')
+      refresh()
+    })
 
   /** Copies a profile, templates and all, and opens the copy ready to be adjusted. */
-  const duplicateProfile = async (summary) => {
+  const duplicateProfile = (summary) => leaveEditor(() => copyProfile(summary))
+
+  const copyProfile = async (summary) => {
     try {
       const original = await api.get(summary.id)
       const copy = await api.create({
@@ -138,8 +174,7 @@ export default function App() {
       <div className="workspace">
         <Sidebar
           expanded={sidebarExpanded}
-          // Editing an existing profile is not one of the destinations in the rail.
-          activeItem={view === 'editor' ? (selected ? '' : 'new') : 'profiles'}
+          activeItem={railSelection(view, selected)}
           theme={theme}
           user={user}
           onShowProfiles={showProfiles}
@@ -159,6 +194,7 @@ export default function App() {
               loading={loading}
               error={error}
               onRetry={refresh}
+              onNew={startNewProfile}
               onOpen={openProfile}
               onDuplicate={duplicateProfile}
               onDelete={setPendingDelete}
@@ -167,12 +203,15 @@ export default function App() {
             <ProfileEditor
               key={editorKey}
               document={selected}
+              onDirtyChange={setEditorDirty}
               onBack={showProfiles}
               onSaved={() => {
+                setEditorDirty(false)
                 refresh()
                 setView('table')
               }}
               onDeleted={() => {
+                setEditorDirty(false)
                 refresh()
                 setView('table')
               }}
@@ -188,6 +227,21 @@ export default function App() {
           confirmLabel="Delete"
           onConfirm={deleteProfile}
           onCancel={() => setPendingDelete(null)}
+        />
+      )}
+
+      {pendingLeave && (
+        <ConfirmDialog
+          title="Leave without saving?"
+          message="This profile has changes that have not been saved. Leaving now discards them."
+          confirmLabel="Discard changes"
+          onConfirm={() => {
+            const leave = pendingLeave
+            setPendingLeave(null)
+            setEditorDirty(false)
+            leave()
+          }}
+          onCancel={() => setPendingLeave(null)}
         />
       )}
 

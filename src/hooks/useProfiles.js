@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client.js'
 
-const PAGE_SIZE = 15
-
 /** Owns the document list: query state, paging, and the headline stats that sit beside it. */
 export function useProfiles(onError, enabled = true) {
-  const [query, setQuery] = useState({ search: '', tag: '', sort: 'updatedAt', direction: 'desc', page: 0 })
+  const [query, setQuery] = useState({ search: '', tag: '', sort: 'updatedAt', direction: 'desc', page: 0, size: 15 })
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState({ items: [], totalItems: 0, totalPages: 0 })
   const [stats, setStats] = useState(null)
@@ -22,7 +20,7 @@ export function useProfiles(onError, enabled = true) {
     setLoading(true)
     try {
       const [result, storeStats] = await Promise.all([
-        api.list({ ...query, search: debouncedSearch, size: PAGE_SIZE }),
+        api.list({ ...query, search: debouncedSearch }),
         api.stats(),
       ])
       setPage(result)
@@ -34,7 +32,7 @@ export function useProfiles(onError, enabled = true) {
     } finally {
       setLoading(false)
     }
-  }, [query.sort, query.direction, query.page, query.tag, debouncedSearch, enabled, onError]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [query.sort, query.direction, query.page, query.size, query.tag, debouncedSearch, enabled, onError]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     load()

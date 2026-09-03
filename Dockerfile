@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Both base images can be swapped for internal ones:
 #   docker build --build-arg RUNTIME_IMAGE=my-registry/nginx-unprivileged:1.27 .
 ARG BUILD_IMAGE=node:22-alpine

@@ -70,6 +70,9 @@ filled in — the templates chosen and the values typed — rather than only the
   it.
 - **Click a tag** to narrow the table to it. That is an exact filter on the tag, not a text search, so
   `regression` in someone's notes does not muddy the list.
+- **Nothing is lost by accident**: leaving a profile with unsaved changes asks first, whether you use
+  the back link, the sidebar, `Esc`, or close the tab.
+- **Rows per page** is yours to choose once there is more than a page of them.
 
 **Everything else**
 
@@ -148,6 +151,47 @@ nginx serves the bundle with gzip, a content security policy whose `connect-src`
 `API_BASE_URL`, one-year immutable caching on content-hashed assets, and `no-store` on `index.html` and
 `config.js` so a deploy reaches browsers immediately.
 
+## How the app fits together
+
+If React is new to you, this is the whole shape of it. There are only three kinds of file.
+
+**Components** (`src/components/`) are functions that return what you see. They take their data as
+arguments — props — and call functions passed to them when something happens. They never fetch, and
+they never reach into each other.
+
+```jsx
+// ProfileTable is given rows and told what to do when one is clicked.
+<ProfileTable page={page} onOpen={openProfile} onDelete={setPendingDelete} />
+```
+
+**Hooks** (`src/hooks/`) hold state and the work that keeps it up to date. `useProfiles` owns the
+query — search, tag, sort, page — and refetches whenever it changes. `useAuth` owns who is signed in.
+`useToasts` owns the little messages. A hook is just a function whose name starts with `use`.
+
+**Plain modules** (`src/lib/`, `src/api/`) are ordinary JavaScript with no React in them at all:
+parsing and formatting JSON, matching templates, talking to the API. They can be read and tested on
+their own.
+
+State lives as high as it needs to and no higher:
+
+```
+App                      which view is showing, which profile is open, the theme
+├── useProfiles          the table's query and its results
+├── ProfileTable         nothing of its own — everything arrives as props
+└── ProfileEditor        the draft being edited, until it is saved or discarded
+    ├── TemplateForm     nothing of its own
+    └── JsonEditor       nothing of its own
+```
+
+Data flows one way — down as props — and changes flow back up as function calls. When you cannot work
+out where a value comes from, follow the props upward until you find the `useState` that owns it.
+
+Two React details worth knowing, because they are both used here:
+
+- `useState` remembers a value between renders; changing it redraws the component.
+- `useEffect` runs after a render, for things outside React: fetching, listening for key presses,
+  warning before the tab closes. Its second argument lists what it depends on.
+
 ## Making it yours
 
 Everything visual is a CSS custom property, and every property lives in one file.
@@ -174,7 +218,9 @@ Components map one-to-one onto what you see, and each takes plain props with no 
 | Component | Shows |
 | --- | --- |
 | `ProfileTable` | The list of every profile, with sorting and paging |
-| `ProfileEditor` | One profile, new or existing: header, toolbar, form/editor/tree, status bar |
+| `ProfileEditor` | One profile, new or existing: toolbar, form/editor/tree, status bar |
+| `ProfileHeader` | The profile's own name, description and tags |
+| `CompareDialog` | Picking another profile and listing what differs |
 | `JsonEditor` · `JsonTree` | The two ways of viewing inputs |
 | `TemplateForm` | The template pickers and the cards of fields they ask for |
 | `FormField` | Every input control the template form can draw (see below) |

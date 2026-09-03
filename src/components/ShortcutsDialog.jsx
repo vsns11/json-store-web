@@ -6,7 +6,7 @@ const SHORTCUTS = [
   ['⌘ / Ctrl + K', 'Focus the search box'],
   ['Tab', 'Indent inside the editor'],
   ['Enter', 'Commit a tag while typing one'],
-  ['Esc', 'Close a dialog or the menu'],
+  ['Esc', 'Close a dialog, or go back to the profile list'],
 ]
 
 export default function ShortcutsDialog({ onClose }) {
