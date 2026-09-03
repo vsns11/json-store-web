@@ -25,7 +25,9 @@ export function inferTemplate(catalog, payload) {
 
     for (const fragment of fragments) {
       const found = {}
-      if (matches(fragment.body, payload, found)) {
+      // A fragment is matched against the document belonging to the system it targets.
+      const document = payload[fragment.target ?? 'main']
+      if (document !== undefined && matches(fragment.body, document, found)) {
         selection[group.id] = fragment.id
         Object.assign(values, found)
         break

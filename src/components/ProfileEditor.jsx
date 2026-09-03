@@ -9,12 +9,22 @@ import {
   parseJson,
   sortJsonKeys,
 } from '../lib/json.js'
+import {
+  DEFAULT_DOCUMENT,
+  invalidDocuments,
+  nextDocumentName,
+  renameDocument,
+  sortByName,
+  toPayload,
+  toTexts,
+} from '../lib/documents.js'
 import { downloadJson, readJsonFile } from '../lib/files.js'
 import { loadCatalog } from '../lib/catalog.js'
 import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
 import { inferTemplate } from '../lib/templateMatch.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import CompareDialog from './CompareDialog.jsx'
+import DocumentTabs from './DocumentTabs.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
 import JsonEditor from './JsonEditor.jsx'
@@ -53,8 +63,10 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
     name: saved?.name ?? '',
     description: saved?.description ?? '',
     tags: saved?.tags ?? [],
-    text: saved ? JSON.stringify(saved.payload, null, 2) : '',
+    // One document per system this profile feeds, held as text while it is being edited.
+    documents: toTexts(saved?.payload),
   }))
+  const [active, setActive] = useState(() => Object.keys(toTexts(saved?.payload))[0])
   const [baseline, setBaseline] = useState(() => snapshot(draft))
   // A profile composed from templates remembers its selection, and can be edited as that form again.
   // Older ones do not, so their selection is worked out from the inputs instead.
@@ -84,7 +96,10 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
       .catch((failure) => toasts.error(failure.message))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const parsed = useMemo(() => parseJson(draft.text), [draft.text])
+  const names = Object.keys(draft.documents)
+  const text = draft.documents[active] ?? ''
+  const invalid = useMemo(() => invalidDocuments(draft.documents), [draft.documents])
+  const parsed = useMemo(() => parseJson(text), [text])
   const shape = useMemo(() => (parsed.ok ? describeShape(parsed.value) : null), [parsed])
   const dirty = snapshot(draft) !== baseline
   // The tree needs something that parses; anything else falls back to the editor.
@@ -101,39 +116,48 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
 
   // jsonb does not preserve key order, so the comparison has to ignore it.
   const matchesTemplate = useMemo(() => {
-    if (!catalog || !template || !parsed.ok) return true
-    const fromTemplate = JSON.stringify(compose(catalog, template.selection, template.values).payload, null, 2)
-    return sortJsonKeys(fromTemplate).text === sortJsonKeys(draft.text).text
-  }, [catalog, template, parsed.ok, draft.text])
+    if (!catalog || !template) return true
+    if (invalid.length > 0) return true
+    const fromTemplate = JSON.stringify(compose(catalog, template.selection, template.values).payload)
+    return sortJsonKeys(fromTemplate).text === sortJsonKeys(JSON.stringify(toPayload(draft.documents))).text
+  }, [catalog, template, invalid.length, draft.documents])
 
   /** Any change in the form rebuilds the inputs from the template. */
   const recompose = (selection, values) => {
     const result = compose(catalog, selection, values)
     setTemplate({ selection, values: result.values })
 
-    const changes = { text: JSON.stringify(result.payload, null, 2) }
+    const documents = Object.fromEntries(
+      Object.entries(result.payload).map(([name, value]) => [name, JSON.stringify(value, null, 2)]),
+    )
+    const changes = { documents: sortByName(documents) }
     // A new profile takes its name from the scenario until someone types their own.
     if (isNew && !draft.name.trim() && result.values.scenarioName) {
       changes.name = String(result.values.scenarioName)
     }
     patch(changes)
+    if (!(active in changes.documents)) setActive(Object.keys(changes.documents)[0] ?? DEFAULT_DOCUMENT)
   }
 
   const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
 
+  /** Everything that edits JSON edits the document currently on screen. */
+  const patchText = (next) =>
+    setDraft((current) => ({ ...current, documents: { ...current.documents, [active]: next } }))
+
   const transform = (transformer) => {
-    const result = transformer(draft.text)
+    const result = transformer(text)
     if (result.ok) {
-      patch({ text: result.text })
+      patchText(result.text)
     } else {
       toasts.error(`Cannot reformat: ${result.error.message}`)
     }
   }
 
   const save = async () => {
-    const parsedNow = parseJson(draft.text)
-    if (!parsedNow.ok) {
-      toasts.error(`Fix the JSON first — line ${parsedNow.error.line}: ${parsedNow.error.message}`)
+    if (invalid.length > 0) {
+      toasts.error(`Fix the JSON in “${invalid[0]}” first`)
+      setActive(invalid[0])
       return
     }
     if (!draft.name.trim()) {
@@ -147,7 +171,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         name: draft.name.trim(),
         description: draft.description.trim() || null,
         tags: draft.tags,
-        payload: parsedNow.value,
+        payload: toPayload(draft.documents),
         template: hasSelection(template) ? template : null,
       }
       const result = isNew ? await api.create(body) : await api.update(saved.id, body)
@@ -174,7 +198,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(draft.text)
+      await navigator.clipboard.writeText(text)
       toasts.info('JSON copied to clipboard')
     } catch {
       toasts.error('The browser blocked clipboard access')
@@ -183,9 +207,10 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
 
   const loadFile = async (file) => {
     if (!file) return
-    const { name, text } = await readJsonFile(file)
-    const formatted = formatJson(text)
-    patch({ text: formatted.ok ? formatted.text : text, name: draft.name || name })
+    const { name, text: contents } = await readJsonFile(file)
+    const formatted = formatJson(contents)
+    patchText(formatted.ok ? formatted.text : contents)
+    if (!draft.name) patch({ name })
     toasts[formatted.ok ? 'info' : 'error'](
       formatted.ok ? `Loaded ${file.name}` : `Loaded ${file.name}, but it is not valid JSON`,
     )
@@ -248,11 +273,34 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         onMinify={() => transform(minifyJson)}
         onSortKeys={() => transform(sortJsonKeys)}
         onCopy={copy}
-        onDownload={() => downloadJson(draft.name, draft.text)}
+        onDownload={() => downloadJson(`${draft.name}-${active}`, text)}
         onUpload={() => fileInputRef.current?.click()}
-        onSample={() => patch({ text: SAMPLE_PROFILE })}
-        onCompare={saved && parsed.ok ? () => setComparing(true) : null}
+        onSample={() => patchText(SAMPLE_PROFILE)}
+        onCompare={saved && invalid.length === 0 ? () => setComparing(true) : null}
       />
+
+      {effectiveView !== 'form' && (
+        <DocumentTabs
+          names={names}
+          active={active}
+          invalid={invalid}
+          onSelect={setActive}
+          onAdd={() => {
+            const name = nextDocumentName(draft.documents)
+            patch({ documents: sortByName({ ...draft.documents, [name]: '{}' }) })
+            setActive(name)
+          }}
+          onRename={(from, to) => {
+            patch({ documents: renameDocument(draft.documents, from, to) })
+            setActive(to)
+          }}
+          onRemove={(name) => {
+            const { [name]: removed, ...rest } = draft.documents
+            patch({ documents: rest })
+            setActive(Object.keys(rest)[0])
+          }}
+        />
+      )}
 
       <div
         className="editor-body"
@@ -304,8 +352,8 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
           <JsonTree value={parsed.value} />
         ) : (
           <JsonEditor
-            value={draft.text}
-            onChange={(text) => patch({ text })}
+            value={text}
+            onChange={patchText}
             errorLine={parsed.ok || parsed.empty ? null : parsed.error.line}
             textareaRef={textareaRef}
           />
@@ -317,7 +365,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
         parsed={parsed}
         shape={shape}
         // The stored size is the minified payload, which is what the profile list shows too.
-        size={parsed.ok ? byteSize(JSON.stringify(parsed.value)) : byteSize(draft.text)}
+        size={parsed.ok ? byteSize(JSON.stringify(parsed.value)) : byteSize(text)}
         dirty={dirty}
         saving={saving}
         isNew={isNew}
@@ -343,7 +391,7 @@ export default function ProfileEditor({ document: saved, onSaved, onDeleted, onB
 
       {comparing && (
         <CompareDialog
-          current={{ id: saved.id, name: draft.name, payload: parsed.value }}
+          current={{ id: saved.id, name: draft.name, payload: toPayload(draft.documents) }}
           onClose={() => setComparing(false)}
         />
       )}

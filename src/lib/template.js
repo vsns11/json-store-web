@@ -89,11 +89,17 @@ export function compose(catalog, selection, values) {
   return { values: next, payload: composeDocument(catalog, selection, next) }
 }
 
+/**
+ * The documents a selection builds, keyed by the system each fragment targets. A scenario that
+ * feeds an API and a payment system produces one document for each.
+ */
 export function composeDocument(catalog, selection, values) {
-  return fragmentsFor(catalog, selection).reduce(
-    (result, fragment) => deepMerge(result, substitute(fragment.body, values)),
-    {},
-  )
+  const documents = {}
+  for (const fragment of fragmentsFor(catalog, selection)) {
+    const target = fragment.target ?? 'main'
+    documents[target] = deepMerge(documents[target] ?? {}, substitute(fragment.body, values))
+  }
+  return documents
 }
 
 /** Which fields are required by the selection but still empty. */

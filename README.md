@@ -43,6 +43,11 @@ saving brings you back to the table. Profiles are created, updated and deleted f
   match, and saving records what was matched. Inputs that match nothing, like a document written by
   hand, get no form rather than a guess.
 
+A profile's inputs are a **set of named documents**, one per system the scenario feeds — an orders
+API, a payment system, a set of assertions. The editor shows a tab per document; the name is editable
+in place, and `+` adds another. One form fills them all: each template fragment names the system it
+contributes to.
+
 - **Editor** — a syntax-coloured editor: keys, strings, numbers, booleans and punctuation are coloured
   as you type, with line numbers, `Tab` indentation, and live validation that reports the exact line and
   column of the first syntax error (click the error to jump the caret there). Colouring is painted on a
@@ -224,6 +229,7 @@ Components map one-to-one onto what you see, and each takes plain props with no 
 | `CompareDialog` | Picking another profile and listing what differs |
 | `JsonEditor` · `JsonTree` | The two ways of viewing inputs |
 | `TemplateForm` | The template pickers and the cards of fields they ask for |
+| `DocumentTabs` | One tab per system the profile feeds |
 | `FormField` | Every input control the template form can draw (see below) |
 | `Sidebar` | Navigation |
 | `TopBar` | Brand, the signed-in user, store totals and search |

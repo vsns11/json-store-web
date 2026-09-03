@@ -37,11 +37,12 @@
 
 /* Fixed widths for everything except the name, so rows keep their rhythm and the
    actions never get squeezed off the edge. */
-.table th:nth-child(2) { width: 200px; }
-.table th:nth-child(3) { width: 96px; }
-.table th:nth-child(4),
-.table th:nth-child(5) { width: 130px; }
-.table th:nth-child(6) { width: 150px; }
+.table th:nth-child(2) { width: 150px; }
+.table th:nth-child(3) { width: 170px; }
+.table th:nth-child(4) { width: 92px; }
+.table th:nth-child(5),
+.table th:nth-child(6) { width: 118px; }
+.table th:nth-child(7) { width: 150px; }
 
 .table th {
   position: sticky;
@@ -190,6 +191,18 @@
 }
 
 /* A tag is a filter: clicking one narrows the table to it. */
+/* The systems a profile feeds, one document each. */
+.doc-pill {
+  padding: 1px 7px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
 .tag-button {
   border: none;
   cursor: pointer;
@@ -458,6 +471,87 @@
 .gutter div.is-error {
   color: var(--danger);
   font-weight: 700;
+}
+
+/* One tab per system the profile feeds. */
+.doc-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.doc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.doc-tab:hover {
+  color: var(--text);
+}
+
+.doc-tab.is-active {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  cursor: default;
+}
+
+.doc-tab-name {
+  min-width: 4ch;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  outline: none;
+  color: inherit;
+  font: inherit;
+}
+
+.doc-tab-name:hover {
+  border-bottom-color: currentColor;
+}
+
+.doc-tab-name:focus {
+  border-bottom-color: currentColor;
+}
+
+.doc-tab-remove {
+  padding: 0 2px;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.doc-tab-remove:hover {
+  opacity: 1;
+}
+
+.doc-tab-add {
+  padding: 4px 7px;
+  border-style: dashed;
+}
+
+.doc-tab-warning {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
 }
 
 /* The textarea and the coloured layer must lay out identically, or the caret drifts. */

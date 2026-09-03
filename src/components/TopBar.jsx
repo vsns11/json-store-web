@@ -20,20 +20,6 @@ export default function TopBar({ stats, user, search, searchRef, onSearch, onSig
         <span>JSON Store</span>
       </div>
 
-      {user && (
-        <div className="topbar-user">
-          <span className={`monogram monogram-sm ${tintClass(user.username)}`} aria-hidden="true">
-            {initialsFor(user.username)}
-          </span>
-          <span className="topbar-user-name" title={`Roles: ${user.roles.join(', ') || 'none'}`}>
-            {user.username}
-          </span>
-          <button className="btn btn-ghost btn-sm" onClick={onSignOut} title="Sign out">
-            <Icon.SignOut />
-          </button>
-        </div>
-      )}
-
       <div className="topbar-stats">
         <span>
           Profiles
@@ -62,6 +48,20 @@ export default function TopBar({ stats, user, search, searchRef, onSearch, onSig
         />
         <span className="kbd">⌘K</span>
       </div>
+
+      {user && (
+        <div className="topbar-user">
+          <span className={`monogram monogram-sm ${tintClass(user.username)}`} aria-hidden="true">
+            {initialsFor(user.username)}
+          </span>
+          <span className="topbar-user-name" title={`Roles: ${user.roles.join(', ') || 'none'}`}>
+            {user.username}
+          </span>
+          <button className="btn btn-ghost btn-sm" onClick={onSignOut} title="Sign out">
+            <Icon.SignOut />
+          </button>
+        </div>
+      )}
     </header>
   )
 }

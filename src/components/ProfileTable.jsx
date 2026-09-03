@@ -5,6 +5,7 @@ import JsonSnippet from './JsonSnippet.jsx'
 
 const COLUMNS = [
   { key: 'name', label: 'Name', sortable: true },
+  { key: 'documents', label: 'Systems', sortable: false },
   { key: 'tags', label: 'Tags', sortable: false },
   { key: 'sizeBytes', label: 'Inputs', sortable: true, align: 'right', title: 'Size of the inputs once stored' },
   { key: 'createdAt', label: 'Created', sortable: true },
@@ -90,7 +91,7 @@ export default function ProfileTable({
               {loading && items.length === 0 &&
                 [0, 1, 2, 3, 4].map((key) => (
                   <tr key={key}>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="skeleton" />
                     </td>
                   </tr>
@@ -98,7 +99,7 @@ export default function ProfileTable({
 
               {!loading && items.length === 0 && (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <div className="table-message">
                       {query.search || query.tag ? (
                         <p className="muted">Nothing matches what you are looking for.</p>
@@ -131,6 +132,15 @@ export default function ProfileTable({
                           <JsonSnippet className="cell-sub" text={item.preview} />
                         )}
                       </span>
+                    </span>
+                  </td>
+                  <td>
+                    <span className="cell-tags">
+                      {(item.documents ?? []).map((name) => (
+                        <span key={name} className="doc-pill">
+                          {name}
+                        </span>
+                      ))}
                     </span>
                   </td>
                   <td>

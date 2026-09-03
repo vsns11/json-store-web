@@ -39,13 +39,12 @@
   font-weight: 700;
 }
 
-/* Who is signed in, at the left with the brand. */
+/* Who is signed in, at the right end of the bar. */
 .topbar-user {
   display: flex;
   align-items: center;
   gap: 7px;
   padding-left: 14px;
-  margin-left: 6px;
   border-left: 1px solid var(--border);
 }
 
@@ -181,13 +180,12 @@
     grid-template-rows: minmax(180px, 34%) 1fr;
   }
 
-  /* Who is signed in, at the left with the brand. */
+  /* Who is signed in, at the right end of the bar. */
 .topbar-user {
   display: flex;
   align-items: center;
   gap: 7px;
   padding-left: 14px;
-  margin-left: 6px;
   border-left: 1px solid var(--border);
 }
 
