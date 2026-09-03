@@ -25,9 +25,7 @@ export function inferTemplate(catalog, payload) {
 
     for (const fragment of fragments) {
       const found = {}
-      // A fragment is matched against the document belonging to the system it targets.
-      const document = payload[fragment.target ?? 'main']
-      if (document !== undefined && matches(fragment.body, document, found)) {
+      if (matchesAnyDocument(fragment, payload, found)) {
         selection[group.id] = fragment.id
         Object.assign(values, found)
         break
@@ -39,6 +37,17 @@ export function inferTemplate(catalog, payload) {
   }
 
   return { selection, values: defaultValues(fieldsFor(catalog, selection), values) }
+}
+
+/**
+ * Tries the document the fragment feeds, then every other one. Profiles stored before inputs were
+ * split per system keep everything in a single document, and they should still get their form.
+ */
+function matchesAnyDocument(fragment, payload, found) {
+  const target = payload[fragment.target ?? 'main']
+  if (target !== undefined && matches(fragment.body, target, found)) return true
+
+  return Object.values(payload).some((document) => matches(fragment.body, document, found))
 }
 
 function matches(body, value, found) {
