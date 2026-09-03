@@ -15,6 +15,22 @@ const COLUMNS = [
 /** Every stored profile at a glance. Editing starts from a row. */
 const PAGE_SIZES = [15, 30, 50]
 
+/** A scenario can feed half a dozen systems; the row shows two and counts the rest. */
+function SystemPills({ names, shown = 2 }) {
+  if (names.length === 0) return <span className="muted">—</span>
+
+  return (
+    <span className="cell-tags" title={names.join(', ')}>
+      {names.slice(0, shown).map((name) => (
+        <span key={name} className="doc-pill">
+          {name}
+        </span>
+      ))}
+      {names.length > shown && <span className="doc-pill doc-pill-more">+{names.length - shown}</span>}
+    </span>
+  )
+}
+
 export default function ProfileTable({
   query,
   onQueryChange,
@@ -135,13 +151,7 @@ export default function ProfileTable({
                     </span>
                   </td>
                   <td>
-                    <span className="cell-tags">
-                      {(item.documents ?? []).map((name) => (
-                        <span key={name} className="doc-pill">
-                          {name}
-                        </span>
-                      ))}
-                    </span>
+                    <SystemPills names={item.documents ?? []} />
                   </td>
                   <td>
                     <span className="cell-tags">
