@@ -24,6 +24,13 @@ function railSelection(view, selected) {
   return selected ? '' : 'new'
 }
 
+/** The theme chosen last time, or the operating system's if there is no last time. */
+function initialTheme() {
+  const stored = localStorage.getItem('theme')
+  if (stored === 'dark' || stored === 'light') return stored
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 export default function App() {
   const { user, status, expired, signIn, signOut } = useAuth()
   const toasts = useToasts()
@@ -38,7 +45,7 @@ export default function App() {
   // Set while the editor holds unsaved work, so leaving can ask first.
   const [editorDirty, setEditorDirty] = useState(false)
   const [pendingLeave, setPendingLeave] = useState(null)
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') ?? 'light')
+  const [theme, setTheme] = useState(initialTheme)
   const [sidebarExpanded, setSidebarExpanded] = useState(() => localStorage.getItem('sidebar') !== 'collapsed')
 
   useEffect(() => {
@@ -50,17 +57,18 @@ export default function App() {
     localStorage.setItem('sidebar', sidebarExpanded ? 'expanded' : 'collapsed')
   }, [sidebarExpanded])
 
+  // The tab title says where you are, and marks unsaved work the way editors do.
   useEffect(() => {
-    const onKeyDown = (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        setView('table')
-        searchRef.current?.focus()
-      }
+    if (view === 'editor') {
+      const name = selected?.name ?? 'New profile'
+      document.title = `${editorDirty ? '• ' : ''}${name} · JSON Store`
+    } else {
+      document.title = 'JSON Store'
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+    return () => {
+      document.title = 'JSON Store'
+    }
+  }, [view, selected, editorDirty])
 
   // Closing the tab with unsaved work gets the browser's own warning.
   useEffect(() => {
@@ -70,6 +78,9 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', warn)
   }, [editorDirty])
 
+  // The latest handlers, readable from listeners that are bound once.
+  const latest = useRef({})
+
   /**
    * Runs an action that leaves the editor. With unsaved work it asks first and remembers what was
    * being attempted, so answering the question carries on where it left off.
@@ -78,6 +89,27 @@ export default function App() {
     if (view === 'editor' && editorDirty) setPendingLeave(() => action)
     else action()
   }
+
+  const showTable = () => {
+    setEditorDirty(false)
+    setView('table')
+  }
+
+  latest.current = { leaveEditor, showTable }
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        latest.current.leaveEditor(() => {
+          latest.current.showTable()
+          searchRef.current?.focus()
+        })
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   const openProfile = (id) => leaveEditor(() => loadProfile(id))
 
@@ -101,10 +133,23 @@ export default function App() {
 
   const showProfiles = () =>
     leaveEditor(() => {
-      setEditorDirty(false)
-      setView('table')
+      showTable()
       refresh()
     })
+
+  /** Typing a search always lands on the table; with unsaved work that is asked about first. */
+  const search = (value) => {
+    if (view === 'editor') {
+      leaveEditor(() => {
+        showTable()
+        update({ search: value })
+        // The box loses focus while the question is up; give it back so typing can carry on.
+        requestAnimationFrame(() => searchRef.current?.focus())
+      })
+    } else {
+      update({ search: value })
+    }
+  }
 
   /** Copies a profile, templates and all, and opens the copy ready to be adjusted. */
   const duplicateProfile = (summary) => leaveEditor(() => copyProfile(summary))
@@ -144,13 +189,13 @@ export default function App() {
 
   if (status === 'checking') {
     return (
-      <div className="login">
+      <div className="login" aria-busy="true">
         <span className="spinner" />
       </div>
     )
   }
 
-  if (status !== 'signed-in') {
+  if (status === 'anonymous') {
     return (
       <>
         <LoginScreen onSignIn={signIn} expired={expired} />
@@ -169,10 +214,7 @@ export default function App() {
         searchRef={searchRef}
         menuExpanded={sidebarExpanded}
         onToggleMenu={() => setSidebarExpanded(!sidebarExpanded)}
-        onSearch={(value) => {
-          setView('table')
-          update({ search: value })
-        }}
+        onSearch={search}
       />
 
       <div className="workspace">
@@ -215,9 +257,8 @@ export default function App() {
                 refresh()
               }}
               onDeleted={() => {
-                setEditorDirty(false)
+                showTable()
                 refresh()
-                setView('table')
               }}
             />
           )}
@@ -229,6 +270,7 @@ export default function App() {
           title="Delete profile"
           message={`The profile “${pendingDelete.name}” will be deleted. This cannot be undone.`}
           confirmLabel="Delete"
+          danger
           onConfirm={deleteProfile}
           onCancel={() => setPendingDelete(null)}
         />
@@ -239,6 +281,7 @@ export default function App() {
           title="Leave without saving?"
           message="This profile has changes that have not been saved. Leaving now discards them."
           confirmLabel="Discard changes"
+          danger
           onConfirm={() => {
             const leave = pendingLeave
             setPendingLeave(null)
@@ -250,6 +293,9 @@ export default function App() {
       )}
 
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+
+      {/* The session ran out mid-work: the app stays as it is, and signing in again carries on. */}
+      {status === 'expired' && <LoginScreen onSignIn={signIn} expired overlay />}
 
       <Toasts />
     </div>

@@ -38,6 +38,8 @@ export function useProfiles(onError, enabled = true) {
       setError(null)
     } catch (failure) {
       if (request !== latestRequest.current) return
+      // A rejected token is handled by the sign-in screen; repeating it here would only add noise.
+      if (failure.status === 401) return
       setError(failure.message)
       onError?.(failure.message)
     } finally {

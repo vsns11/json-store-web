@@ -57,7 +57,7 @@ function matches(body, value, found) {
 
   if (Array.isArray(body)) {
     if (!Array.isArray(value)) return false
-    return body.every((item, index) => matches(item, value[index], found))
+    return matchesList(body, value, found)
   }
 
   if (body !== null && typeof body === 'object') {
@@ -66,6 +66,29 @@ function matches(body, value, found) {
   }
 
   return body === value
+}
+
+/**
+ * Lists are appended to when fragments merge, so the items one fragment wrote may sit among items
+ * another added. They must all be there, in the order the fragment wrote them, with anything else
+ * allowed in between — the same rule an object follows for keys it did not write.
+ */
+function matchesList(body, value, found) {
+  let from = 0
+  for (const item of body) {
+    let index = from
+    while (index < value.length) {
+      const attempt = {}
+      if (matches(item, value[index], attempt)) {
+        Object.assign(found, attempt)
+        break
+      }
+      index += 1
+    }
+    if (index === value.length) return false
+    from = index + 1
+  }
+  return true
 }
 
 function matchesString(body, value, found) {
@@ -84,7 +107,9 @@ function matchesString(body, value, found) {
   const match = value.match(pattern)
   if (!match) return false
   keys.forEach((key, index) => {
-    found[key] = match[index + 1]
+    // A value cut out of a longer string can only ever be text. One read from a placeholder that
+    // stood alone kept its type, so it is the better of the two and is not overwritten here.
+    if (!(key in found)) found[key] = match[index + 1]
   })
   return true
 }
