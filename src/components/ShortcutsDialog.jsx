@@ -1,43 +1,37 @@
-import { useEffect } from 'react'
+import Dialog from './Dialog.jsx'
+import { shortcut } from '../lib/platform.js'
 
 const SHORTCUTS = [
-  ['⌘ / Ctrl + S', 'Save the open profile'],
-  ['⌘ / Ctrl + ⇧ + F', 'Format the JSON'],
-  ['⌘ / Ctrl + K', 'Focus the search box'],
-  ['Tab', 'Indent inside the editor'],
-  ['Enter', 'Commit a tag while typing one'],
+  [shortcut('S'), 'Save the open profile'],
+  [shortcut('⇧', 'F'), 'Format the JSON'],
+  [shortcut('K'), 'Focus the search box'],
+  ['Tab / ⇧ Tab', 'Indent or outdent the line, or the selected lines'],
+  ['Enter', 'New line at the same indent; deeper after { or ['],
+  ['Enter or ,', 'Commit a tag while typing one'],
   ['Esc', 'Close a dialog, or go back to the profile list'],
 ]
 
 export default function ShortcutsDialog({ onClose }) {
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-        <h3>Keyboard shortcuts</h3>
-        <dl className="shortcut-list">
-          {SHORTCUTS.map(([keys, description]) => (
-            <div key={keys} className="shortcut-row">
-              <dt>
-                <span className="kbd">{keys}</span>
-              </dt>
-              <dd>{description}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="dialog-actions">
-          <button className="btn btn-primary" onClick={onClose} autoFocus>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+    <Dialog
+      title="Keyboard shortcuts"
+      onClose={onClose}
+      actions={
+        <button className="btn btn-primary" onClick={onClose} autoFocus>
+          Close
+        </button>
+      }
+    >
+      <dl className="shortcut-list">
+        {SHORTCUTS.map(([keys, description]) => (
+          <div key={keys} className="shortcut-row">
+            <dt>
+              <span className="kbd">{keys}</span>
+            </dt>
+            <dd>{description}</dd>
+          </div>
+        ))}
+      </dl>
+    </Dialog>
   )
 }

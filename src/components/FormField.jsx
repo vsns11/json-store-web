@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Icon } from './Icons.jsx'
 
 /**
  * Every input the template form can draw, chosen by a field's `type`. Adding a control here — and a

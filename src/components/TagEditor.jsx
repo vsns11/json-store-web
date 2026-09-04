@@ -24,6 +24,8 @@ export default function TagEditor({ tags, onChange }) {
         className="tag-input"
         value={draft}
         placeholder="+ tag"
+        aria-label="Add a tag"
+        maxLength={40}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={add}
         onKeyDown={(event) => {

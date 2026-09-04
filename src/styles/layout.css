@@ -3,7 +3,8 @@
    The shell: top bar, sidebar rail, the panel every view sits in.
    ========================================================================== */
 
-.app {  display: grid;
+.app {
+  display: grid;
   grid-template-rows: auto 1fr;
   height: 100%;
   overflow: hidden;
@@ -24,6 +25,7 @@
   gap: 10px;
   font-weight: 650;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .brand-mark {
@@ -172,29 +174,57 @@
   opacity: 1;
 }
 
-
-
+/* A narrow window: the rail becomes a row of icons under the top bar, and the totals go. */
 @media (max-width: 940px) {
   .workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(180px, 34%) 1fr;
+    grid-template-rows: auto 1fr;
   }
 
-  /* Who is signed in, at the right end of the bar. */
-.topbar-user {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding-left: 14px;
-  border-left: 1px solid var(--border);
-}
+  .sidebar,
+  .sidebar.is-expanded {
+    width: auto;
+    padding: 6px 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
 
-.topbar-user-name {
-  font-size: 12.5px;
-  font-weight: 550;
-}
+  .sidebar nav {
+    display: flex;
+    gap: 2px;
+  }
 
-.topbar-stats {
+  .side-item {
+    width: auto;
+    margin-bottom: 0;
+  }
+
+  .side-label {
     display: none;
+  }
+
+  .menu-trigger,
+  .topbar-stats {
+    display: none;
+  }
+
+  .topbar {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .content {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand span:last-child,
+  .topbar-user-name {
+    display: none;
+  }
+
+  .search {
+    flex-basis: 100%;
   }
 }

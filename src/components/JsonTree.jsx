@@ -1,5 +1,8 @@
 import { useState } from 'react'
 
+/** How many children of one node are drawn before the rest wait behind a button. */
+const PAGE = 200
+
 /** Read-only, collapsible view of a parsed payload. Branches deeper than two levels start collapsed. */
 export default function JsonTree({ value }) {
   return (
@@ -11,6 +14,8 @@ export default function JsonTree({ value }) {
 
 function Node({ label, value, depth, isLast }) {
   const [open, setOpen] = useState(depth < 2)
+  // A ten-thousand-item array is drawn a page at a time, so opening it never freezes the page.
+  const [shown, setShown] = useState(PAGE)
   const isArray = Array.isArray(value)
   const isObject = !isArray && value !== null && typeof value === 'object'
 
@@ -30,21 +35,27 @@ function Node({ label, value, depth, isLast }) {
   const entries = isArray ? value.map((item, index) => [index, item]) : Object.entries(value)
   const [openBrace, closeBrace] = isArray ? ['[', ']'] : ['{', '}']
   const summary = `${entries.length} ${isArray ? 'item' : 'key'}${entries.length === 1 ? '' : 's'}`
+  const visible = entries.slice(0, shown)
+  const hidden = entries.length - visible.length
 
   return (
     <div>
       <div className="tree-row">
-        <button className="tree-toggle" onClick={() => setOpen(!open)} aria-label={open ? 'Collapse' : 'Expand'}>
+        <button
+          className="tree-toggle"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-label={`${open ? 'Collapse' : 'Expand'} ${label ?? 'root'}`}
+        >
           {open ? '▼' : '▶'}
         </button>
         <span>
           {label !== null && <span className="tree-key">"{label}": </span>}
           {openBrace}
           {!open && (
-            <span className="tree-collapsed" onClick={() => setOpen(true)}>
-              {' '}
-              … {summary}{' '}
-            </span>
+            <button className="tree-collapsed" onClick={() => setOpen(true)}>
+              … {summary}
+            </button>
           )}
           {!open && closeBrace}
           {!open && !isLast && ','}
@@ -54,7 +65,7 @@ function Node({ label, value, depth, isLast }) {
       {open && (
         <>
           <div className="tree-children">
-            {entries.map(([key, item], index) => (
+            {visible.map(([key, item], index) => (
               <Node
                 key={key}
                 label={isArray ? null : key}
@@ -63,6 +74,14 @@ function Node({ label, value, depth, isLast }) {
                 isLast={index === entries.length - 1}
               />
             ))}
+            {hidden > 0 && (
+              <div className="tree-row">
+                <span className="tree-toggle" />
+                <button className="tree-more" onClick={() => setShown(shown + PAGE)}>
+                  … {Math.min(hidden, PAGE)} more of {hidden}
+                </button>
+              </div>
+            )}
           </div>
           <div className="tree-row">
             <span className="tree-toggle" />

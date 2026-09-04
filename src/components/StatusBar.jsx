@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import { formatBytes, formatRelativeTime } from '../lib/json.js'
+import { shortcut } from '../lib/platform.js'
 
 /**
  * Where the draft stands against the stored profile. This is the only place the app reports a
@@ -53,7 +54,7 @@ export default function StatusBar({
 }) {
   return (
     <footer className="statusbar">
-      <span className={`status-pill ${parsed.ok ? 'is-valid' : parsed.empty ? 'is-empty' : 'is-invalid'}`}>
+      <span className={`status-pill ${parsed.ok ? 'is-valid' : parsed.empty ? 'is-empty' : 'is-invalid'}`} role="status">
         <span className="status-dot" /> {parsed.ok ? 'Valid JSON' : parsed.empty ? 'Empty' : 'Invalid'}
       </span>
 
@@ -102,7 +103,12 @@ export default function StatusBar({
           <Icon.Revert /> Revert
         </button>
 
-        <button className="btn btn-sm btn-primary" onClick={onSave} disabled={saving || !parsed.ok || !dirty}>
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={onSave}
+          disabled={saving || !parsed.ok || !dirty}
+          title={`Save (${shortcut('S')})`}
+        >
           {saving ? <span className="spinner" /> : <Icon.Save />}
           {isNew ? 'Save profile' : 'Save changes'}
         </button>

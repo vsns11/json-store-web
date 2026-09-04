@@ -73,7 +73,11 @@ export default function ProfileTable({
             Tag “{query.tag}” ×
           </button>
         )}
-        {loading && <span className="spinner" aria-label="Loading" />}
+        {loading && <span className="spinner" role="status" aria-label="Loading" />}
+        <span className="table-head-spacer" />
+        <button className="btn btn-primary btn-sm" onClick={onNew}>
+          <Icon.Plus /> New profile
+        </button>
       </header>
 
       <div className="table-scroll">
@@ -121,7 +125,12 @@ export default function ProfileTable({
                   <td colSpan={7}>
                     <div className="table-message">
                       {query.search || query.tag ? (
-                        <p className="muted">Nothing matches what you are looking for.</p>
+                        <>
+                          <p className="muted">Nothing matches what you are looking for.</p>
+                          <button className="btn btn-sm" onClick={() => onQueryChange({ search: '', tag: '' })}>
+                            Show all profiles
+                          </button>
+                        </>
                       ) : (
                         <>
                           <p className="muted">No profiles yet. A profile is a named set of inputs a test scenario runs with.</p>
@@ -136,8 +145,15 @@ export default function ProfileTable({
               )}
 
               {items.map((item) => (
-                <tr key={item.id} onClick={() => onOpen(item.id)} tabIndex={0}
-                    onKeyDown={(event) => event.key === 'Enter' && onOpen(item.id)}>
+                <tr
+                  key={item.id}
+                  onClick={() => onOpen(item.id)}
+                  tabIndex={0}
+                  aria-label={`Open ${item.name}`}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && event.target === event.currentTarget) onOpen(item.id)
+                  }}
+                >
                   <td>
                     <span className="cell-title">
                       <span className={`monogram ${tintClass(item.name)}`} aria-hidden="true">
@@ -195,12 +211,12 @@ export default function ProfileTable({
                       <button className="btn btn-sm" onClick={() => onOpen(item.id)}>
                         Edit
                       </button>
-                      <button className="btn btn-sm" title="Duplicate" onClick={() => onDuplicate(item)}>
+                      <button className="btn btn-sm" title="Duplicate" aria-label={`Duplicate ${item.name}`} onClick={() => onDuplicate(item)}>
                         <Icon.Copy />
                       </button>
                       {/* Only offered to accounts the API would actually let delete. */}
                       {onDelete && (
-                        <button className="btn btn-sm btn-danger" title="Delete" onClick={() => onDelete(item)}>
+                        <button className="btn btn-sm btn-danger" title="Delete" aria-label={`Delete ${item.name}`} onClick={() => onDelete(item)}>
                           <Icon.Trash />
                         </button>
                       )}
@@ -239,9 +255,10 @@ export default function ProfileTable({
               min={1}
               max={totalPages}
               value={query.page + 1}
+              aria-label="Page number"
               onChange={(event) => {
                 const page = Number(event.target.value) - 1
-                if (page >= 0 && page < totalPages) onQueryChange({ page })
+                if (Number.isInteger(page) && page >= 0 && page < totalPages) onQueryChange({ page })
               }}
             />
             of {totalPages}

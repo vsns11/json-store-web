@@ -1,28 +1,23 @@
-import { useEffect } from 'react'
+import Dialog from './Dialog.jsx'
 
-export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm', onConfirm, onCancel }) {
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onCancel()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onCancel])
-
+/** A yes-or-no question. The confirming button is focused, so Enter answers it and Esc declines. */
+export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm', danger = false, onConfirm, onCancel }) {
   return (
-    <div className="overlay" onClick={onCancel}>
-      <div className="dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-        <h3>{title}</h3>
-        <p>{message}</p>
-        <div className="dialog-actions">
+    <Dialog
+      title={title}
+      onClose={onCancel}
+      actions={
+        <>
           <button className="btn" onClick={onCancel}>
             Cancel
           </button>
-          <button className="btn btn-primary" onClick={onConfirm} autoFocus>
+          <button className={`btn ${danger ? 'btn-danger-solid' : 'btn-primary'}`} onClick={onConfirm} autoFocus>
             {confirmLabel}
           </button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <p>{message}</p>
+    </Dialog>
   )
 }

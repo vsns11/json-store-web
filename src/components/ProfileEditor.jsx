@@ -61,6 +61,13 @@ function draftOf(profile) {
   }
 }
 
+/** Composed documents as editable text, or a single empty one when the selection builds nothing. */
+function textsOf(payload) {
+  const entries = Object.entries(payload)
+  if (entries.length === 0) return { [DEFAULT_DOCUMENT]: '' }
+  return sortByName(Object.fromEntries(entries.map(([name, value]) => [name, JSON.stringify(value, null, 2)])))
+}
+
 /**
  * Edits one profile. Mounted with a key, so opening another profile always
  * starts from a clean draft.
@@ -88,8 +95,14 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   const [view, setView] = useState(!opened || opened.template ? 'form' : 'code')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // Something about to overwrite the document on screen — a sample, an imported file — waits
+  // here for a yes while that document still has content.
+  const [pendingReplace, setPendingReplace] = useState(null)
   const [comparing, setComparing] = useState(false)
   const [dragging, setDragging] = useState(false)
+  // Drag events fire for every child the pointer crosses; counting them is what tells a real
+  // leave from a move between two children.
+  const dragDepth = useRef(0)
   // One line in the status bar saying what just happened. It replaces itself and then clears,
   // so routine confirmations never pile up the way a stack of pop-ups does.
   const [note, setNote] = useState(null)
@@ -104,19 +117,30 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   useEffect(() => () => clearTimeout(noteTimer.current), [])
 
   useEffect(() => {
+    let cancelled = false
     loadCatalog()
       .then((loaded) => {
+        if (cancelled) return
         setCatalog(loaded)
         if (opened && !opened.template) {
           const match = inferTemplate(loaded, opened.payload)
           if (match) {
             setTemplate(match)
+            baselineTemplate.current = match
             setInferred(true)
             setView('form')
           }
         }
       })
-      .catch((failure) => toasts.error(failure.message))
+      .catch((failure) => {
+        if (cancelled) return
+        // Without the catalogue there is no form to draw; the editor still works.
+        toasts.error(`The template catalogue could not be loaded: ${failure.message}`)
+        setView('code')
+      })
+    return () => {
+      cancelled = true
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const names = Object.keys(draft.documents)
@@ -150,28 +174,35 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
     return sortJsonKeys(fromTemplate).text === sortJsonKeys(JSON.stringify(toPayload(draft.documents))).text
   }, [catalog, template, invalid.length, draft.documents])
 
+  const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
+
   /** Any change in the form rebuilds the inputs from the template. */
   const recompose = (selection, values) => {
     const result = compose(catalog, selection, values)
     setTemplate({ selection, values: result.values })
 
-    const documents = Object.fromEntries(
-      Object.entries(result.payload).map(([name, value]) => [name, JSON.stringify(value, null, 2)]),
-    )
-    const changes = { documents: sortByName(documents) }
+    const changes = { documents: textsOf(result.payload) }
     // A new profile takes its name from the scenario until someone types their own.
     if (isNew && !draft.name.trim() && result.values.scenarioName) {
       changes.name = String(result.values.scenarioName)
     }
     patch(changes)
-    if (!(active in changes.documents)) setChosen(Object.keys(changes.documents)[0] ?? DEFAULT_DOCUMENT)
+    if (!(active in changes.documents)) setChosen(Object.keys(changes.documents)[0])
   }
-
-  const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
 
   /** Everything that edits JSON edits the document currently on screen. */
   const patchText = (next) =>
     setDraft((current) => ({ ...current, documents: { ...current.documents, [active]: next } }))
+
+  /** Overwrites the document on screen, asking first if there is something there to lose. */
+  const replaceText = (next, what, onDone) => {
+    const apply = () => {
+      patchText(next)
+      onDone?.()
+    }
+    if (text.trim() && next !== text) setPendingReplace({ what, apply })
+    else apply()
+  }
 
   const transform = (transformer) => {
     const result = transformer(text)
@@ -182,14 +213,25 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
     }
   }
 
+  const showCode = () => {
+    setView('code')
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }
+
   const save = async () => {
     if (invalid.length > 0) {
       toasts.error(`Fix the JSON in “${invalid[0]}” first`)
       setChosen(invalid[0])
+      showCode()
       return
     }
     if (!draft.name.trim()) {
       toasts.error('Give the profile a name before saving')
+      return
+    }
+    if (governed && missing.length > 0) {
+      toasts.error(`Fill in “${missing[0].label}” first — the template needs it`)
+      setView('form')
       return
     }
 
@@ -200,12 +242,14 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         description: draft.description.trim() || null,
         tags: draft.tags,
         payload: toPayload(draft.documents),
-        template: hasSelection(template) ? template : null,
+        template: governed ? template : null,
       }
       const result = isNew ? await api.create(body) : await api.update(saved.id, body)
       setSaved(result)
       setBaseline(snapshot(draft))
       baselineTemplate.current = result.template ?? EMPTY_TEMPLATE
+      setInferred(false)
+      flash(isNew ? 'Saved' : 'Saved your changes')
       onSaved(result)
     } catch (error) {
       toasts.error(error.message)
@@ -225,6 +269,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
       setBaseline(snapshot(fresh))
       setTemplate(stored.template ?? EMPTY_TEMPLATE)
       baselineTemplate.current = stored.template ?? EMPTY_TEMPLATE
+      setInferred(false)
       setChosen(Object.keys(fresh.documents)[0])
       flash('Loaded the stored version')
     } catch (failure) {
@@ -256,24 +301,36 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
 
   const loadFile = async (file) => {
     if (!file) return
+    let loaded
     try {
-      const { name, text: contents } = await readJsonFile(file)
-      const formatted = formatJson(contents)
-      patchText(formatted.ok ? formatted.text : contents)
+      loaded = await readJsonFile(file)
+    } catch {
+      toasts.error(`Could not read ${file.name}`)
+      return
+    }
+    const { name, text: contents } = loaded
+    const formatted = formatJson(contents)
+    replaceText(formatted.ok ? formatted.text : contents, `the contents of ${file.name}`, () => {
       if (!draft.name.trim()) patch({ name })
       if (formatted.ok) flash(`Loaded ${file.name}`)
       else toasts.error(`${file.name} is not valid JSON — it was loaded so you can fix it`)
-    } catch {
-      toasts.error(`Could not read ${file.name}`)
-    }
+      showCode()
+    })
   }
+
+  const insertSample = () => replaceText(SAMPLE_PROFILE, 'a sample document', showCode)
 
   const jumpToError = () => {
     const position = parsed.error?.position
-    const input = textareaRef.current
-    if (position == null || !input) return
-    input.focus()
-    input.setSelectionRange(position, position + 1)
+    if (position == null) return
+    setView('code')
+    // The textarea may only appear on the next frame, if the tree or form was showing.
+    requestAnimationFrame(() => {
+      const input = textareaRef.current
+      if (!input) return
+      input.focus()
+      input.setSelectionRange(position, position + 1)
+    })
   }
 
   // Anything that navigates away needs to know there is unsaved work to warn about.
@@ -315,7 +372,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   }, [])
 
   return (
-    <section className="panel">
+    <section className="panel" aria-label={isNew ? 'New profile' : `Profile ${saved.name}`}>
       <ProfileHeader
         name={draft.name}
         description={draft.description}
@@ -334,7 +391,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         onCopy={copy}
         onDownload={() => downloadJson(`${draft.name}-${active}`, text)}
         onUpload={() => fileInputRef.current?.click()}
-        onSample={() => patchText(SAMPLE_PROFILE)}
+        onSample={insertSample}
         onCompare={saved && invalid.length === 0 ? () => setComparing(true) : null}
       />
 
@@ -365,13 +422,19 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
 
       <div
         className="editor-body"
-        onDragOver={(event) => {
+        onDragEnter={(event) => {
           event.preventDefault()
+          dragDepth.current += 1
           setDragging(true)
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={() => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1)
+          if (dragDepth.current === 0) setDragging(false)
+        }}
         onDrop={(event) => {
           event.preventDefault()
+          dragDepth.current = 0
           setDragging(false)
           loadFile(event.dataTransfer.files[0])
         }}
@@ -412,7 +475,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
               />
             </div>
           ) : (
-            <div className="table-message">
+            <div className="table-message" aria-busy="true">
               <span className="spinner" />
             </div>
           )
@@ -426,7 +489,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
             textareaRef={textareaRef}
           />
         )}
-        {dragging && <div className="drop-target">Drop a .json file to load it</div>}
+        {dragging && <div className="drop-target">Drop a .json file to load it into “{active}”</div>}
       </div>
 
       <StatusBar
@@ -470,11 +533,26 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         />
       )}
 
+      {pendingReplace && (
+        <ConfirmDialog
+          title={`Replace “${active}”?`}
+          message={`The document “${active}” will be replaced with ${pendingReplace.what}. Revert brings back the saved version, but not anything typed since.`}
+          confirmLabel="Replace"
+          onConfirm={() => {
+            const { apply } = pendingReplace
+            setPendingReplace(null)
+            apply()
+          }}
+          onCancel={() => setPendingReplace(null)}
+        />
+      )}
+
       {confirmingDelete && (
         <ConfirmDialog
           title="Delete profile"
           message={`“${saved.name}” will be deleted. This cannot be undone.`}
           confirmLabel="Delete"
+          danger
           onConfirm={remove}
           onCancel={() => setConfirmingDelete(false)}
         />

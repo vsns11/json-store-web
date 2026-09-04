@@ -1,9 +1,11 @@
 import { Icon } from './Icons.jsx'
 
 /**
- * The navigation rail. Collapsed it shows icons; the hamburger expands it in place.
- * Only a destination the app is actually on is highlighted — editing an existing profile
- * arrives from the table, so nothing is marked active then.
+ * The navigation rail. Collapsed it shows icons; the hamburger expands it in place. On a narrow
+ * window it turns into a row of icons under the top bar instead.
+ *
+ * Only a destination the app is actually on is highlighted — editing an existing profile arrives
+ * from the table, so nothing is marked active then.
  */
 export default function Sidebar({
   expanded,
@@ -30,20 +32,21 @@ export default function Sidebar({
 
   return (
     <aside className={`sidebar${expanded ? ' is-expanded' : ''}`}>
-      <nav>
+      <nav aria-label="Main">
         {items.map((item) => (
           <button
             key={item.key}
             className={`side-item${item.key === activeItem ? ' is-active' : ''}`}
             onClick={item.onClick}
-            title={expanded ? undefined : item.label}
+            title={item.label}
+            aria-label={item.label}
+            aria-current={item.key === activeItem ? 'page' : undefined}
           >
             <span className="side-icon">{item.icon}</span>
             <span className="side-label">{item.label}</span>
           </button>
         ))}
       </nav>
-
     </aside>
   )
 }

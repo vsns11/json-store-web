@@ -7,7 +7,7 @@ import { Icon } from './Icons.jsx'
  */
 export default function DocumentTabs({ names, active, invalid, onSelect, onAdd, onRename, onRemove }) {
   return (
-    <div className="doc-tabs">
+    <div className="doc-tabs" role="tablist" aria-label="Documents">
       {/* Keyed by position, not by name: renaming happens as you type, and a key that changed
           with it would rebuild the input and drop the caret. */}
       {names.map((name, index) =>
@@ -22,7 +22,7 @@ export default function DocumentTabs({ names, active, invalid, onSelect, onAdd, 
             onRemove={onRemove}
           />
         ) : (
-          <button key={index} className="doc-tab" onClick={() => onSelect(name)}>
+          <button key={index} role="tab" aria-selected={false} className="doc-tab" onClick={() => onSelect(name)}>
             {invalid.includes(name) && <span className="doc-tab-warning" title="Not valid JSON" />}
             {name}
           </button>
@@ -48,7 +48,7 @@ function ActiveTab({ name, siblings, invalid, canRemove, onRename, onRemove }) {
   }
 
   return (
-    <span className="doc-tab is-active">
+    <span className="doc-tab is-active" role="tab" aria-selected={true}>
       {invalid && <span className="doc-tab-warning" title="Not valid JSON" />}
       <input
         className="doc-tab-name"
@@ -60,7 +60,7 @@ function ActiveTab({ name, siblings, invalid, canRemove, onRename, onRemove }) {
         onKeyDown={(event) => (event.key === 'Enter' || event.key === 'Escape') && event.target.blur()}
       />
       {canRemove && (
-        <button className="doc-tab-remove" title={`Remove ${name}`} onClick={() => onRemove(name)}>
+        <button className="doc-tab-remove" title={`Remove ${name}`} aria-label={`Remove ${name}`} onClick={() => onRemove(name)}>
           ×
         </button>
       )}

@@ -1,6 +1,7 @@
 import { Icon } from './Icons.jsx'
 import { formatBytes, formatRelativeTime } from '../lib/json.js'
 import { initialsFor, tintClass } from '../lib/palette.js'
+import { shortcut } from '../lib/platform.js'
 
 /** The bar across the top: menu toggle, brand, who is signed in, store totals and search. */
 export default function TopBar({ stats, user, search, searchRef, onSearch, onSignOut, onToggleMenu, menuExpanded }) {
@@ -42,11 +43,15 @@ export default function TopBar({ stats, user, search, searchRef, onSearch, onSig
         <input
           ref={searchRef}
           className="input"
+          type="search"
           value={search}
           placeholder="Search names, tags, inputs…"
+          aria-label="Search profiles"
           onChange={(event) => onSearch(event.target.value)}
         />
-        <span className="kbd">⌘K</span>
+        <span className="kbd" aria-hidden="true">
+          {shortcut('K')}
+        </span>
       </div>
 
       {user && (
@@ -57,7 +62,7 @@ export default function TopBar({ stats, user, search, searchRef, onSearch, onSig
           <span className="topbar-user-name" title={`Roles: ${user.roles.join(', ') || 'none'}`}>
             {user.username}
           </span>
-          <button className="btn btn-ghost btn-sm" onClick={onSignOut} title="Sign out">
+          <button className="btn btn-ghost btn-sm" onClick={onSignOut} title="Sign out" aria-label="Sign out">
             <Icon.SignOut />
           </button>
         </div>

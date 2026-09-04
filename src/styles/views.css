@@ -19,6 +19,10 @@
   letter-spacing: -0.01em;
 }
 
+.table-head-spacer {
+  flex: 1;
+}
+
 .table-scroll {
   flex: 1;
   min-height: 0;
@@ -214,7 +218,6 @@
   white-space: nowrap;
 }
 
-/* A tag is a filter: clicking one narrows the table to it. */
 /* The systems a profile feeds, one document each. */
 .doc-pill {
   padding: 1px 7px;
@@ -236,6 +239,7 @@
   color: var(--text-faint);
 }
 
+/* A tag is a filter: clicking one narrows the table to it. */
 .tag-button {
   border: none;
   cursor: pointer;
@@ -383,12 +387,6 @@
   gap: 12px;
 }
 
-.header-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
 .tag-editor {
   display: flex;
   align-items: center;
@@ -453,6 +451,14 @@
   margin-left: auto;
 }
 
+/* A narrow window wraps the toolbar rather than scrolling the view switch out of sight. */
+@media (max-width: 940px) {
+  .toolbar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
+
 .header-fields {
   flex: 1;
   min-width: 0;
@@ -514,6 +520,17 @@
 .gutter div.is-error {
   color: var(--danger);
   font-weight: 700;
+}
+
+/* A stripe behind the line the parser stopped on, scrolled with the text. */
+.code-error-line {
+  position: absolute;
+  top: calc(var(--code-padding-y) + (var(--line) - 1) * var(--code-line));
+  left: 0;
+  right: 0;
+  height: var(--code-line);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  pointer-events: none;
 }
 
 /* One tab per system the profile feeds. */
@@ -697,9 +714,21 @@
   margin-left: 6px;
 }
 
-.tree-collapsed {
+.tree-collapsed,
+.tree-more {
+  padding: 0 4px;
+  background: none;
+  border: none;
+  border-radius: 4px;
   color: var(--text-faint);
+  font: inherit;
   cursor: pointer;
+}
+
+.tree-collapsed:hover,
+.tree-more:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
 }
 
 /* One colour per JSON type; change them in tokens.css, not here. */
