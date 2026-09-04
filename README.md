@@ -92,7 +92,9 @@ filled in — the templates chosen and the values typed — rather than only the
 - A sidebar that expands and collapses in place, light and dark themes
 - The signed-in user sits top left, beside the brand; creating a profile lives in the sidebar
 - Sign-in against the directory the API is pointed at; the session token lives in the tab only
-- `⌘/Ctrl+S` save · `⌘/Ctrl+⇧F` format · `⌘/Ctrl+K` search
+- A session is renewed in the background before its token runs out, for as long as the API allows;
+  if it does run out mid-edit, the sign-in card is laid over the page and nothing typed is lost
+- `⌘/Ctrl+S` save · `⌘/Ctrl+⇧F` format · `⌘/Ctrl+K` search · `Tab`/`⇧Tab` indent · `Enter` keeps the indent
 
 ## Getting started
 
@@ -119,6 +121,14 @@ ever talks to one origin and there is no CORS to think about. If the API is some
 API_URL=https://api.example.com npm run dev
 ```
 
+### Checks
+
+```bash
+npm run lint     # ESLint, including the rules of hooks
+npm test         # unit tests for the JSON, template and diff helpers in src/lib
+npm run check    # both, then a production build — what CI runs
+```
+
 ### Container
 
 ```bash
@@ -142,6 +152,7 @@ screen.
 | Sign-in says the API cannot be reached | The API is not running, or `API_BASE_URL` points somewhere else. Check `curl localhost:8080/api/auth/login` |
 | Sign-in works but every request then fails | The API is on another origin and does not allow this one: add it to `CORS_ORIGINS` there |
 | `Port 5173 is in use` | Another Vite server is running: `npm run dev -- --port 5174` |
+| The page goes white on load in an old browser | The theme script and the CSS use `color-mix`, `:focus-visible` and `dataset`; anything from 2023 on is fine |
 | The page loads but nothing appears | Look at `config.js` in the browser: it should hold the API address the container was given |
 | Changes do not show after a rebuild | Hard-reload once; `index.html` and `config.js` are sent with `no-store`, hashed assets are cached forever |
 
