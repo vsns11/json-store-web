@@ -448,6 +448,16 @@
   overflow-x: auto;
 }
 
+/* Form · Editor · Tree sit at the far end of the toolbar. */
+.toolbar-views {
+  margin-left: auto;
+}
+
+.header-fields {
+  flex: 1;
+  min-width: 0;
+}
+
 .toolbar-divider {
   width: 1px;
   height: 18px;
@@ -709,12 +719,17 @@
   background: var(--surface-sunken);
   border-top: 1px solid var(--border);
   font-size: 12px;
+  /* One line whatever the width: the buttons on the right must never be pushed off, and
+     everything on the left is a detail that can be given up first (see below). */
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: none;
   padding: 3px 9px;
   border-radius: 20px;
   font-weight: 550;
@@ -746,9 +761,18 @@
 .status-metrics {
   display: flex;
   gap: 12px;
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-muted);
   font-family: var(--mono);
   font-size: 11.5px;
+}
+
+/* In a narrow window the counts go first: the save state and the buttons matter more. */
+@media (max-width: 1100px) {
+  .status-metrics {
+    display: none;
+  }
 }
 
 .status-error {
@@ -758,15 +782,17 @@
   white-space: nowrap;
 }
 
-/* Saved or not, said plainly next to the buttons rather than in a toast. */
+/* Saved or not, said plainly next to the buttons and left there. */
 .save-state {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
+  white-space: nowrap;
 }
 
-.save-state.is-unsaved {
+.save-state.is-unsaved,
+.save-state.is-new {
   color: var(--text-muted);
 }
 
@@ -774,11 +800,25 @@
   color: var(--success);
 }
 
+/* What just happened — reloaded, copied, reverted. One slot, replaced each time, then gone. */
+.status-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  animation: note-in 0.18s ease-out;
+}
+
+@keyframes note-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .status-actions {
   display: flex;
   gap: 8px;
   margin-left: auto;
   align-items: center;
+  flex: none;
 }
 
 .unsaved-dot {

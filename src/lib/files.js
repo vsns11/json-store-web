@@ -11,5 +11,6 @@ export function downloadJson(name, text) {
   link.href = url
   link.download = `${(name.trim() || 'profile').replace(/[^\w.-]+/g, '-').toLowerCase()}.json`
   link.click()
-  URL.revokeObjectURL(url)
+  // Released on the next turn of the event loop: revoking it straight away can cancel the download.
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }

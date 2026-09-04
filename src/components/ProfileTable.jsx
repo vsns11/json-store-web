@@ -12,12 +12,12 @@ const COLUMNS = [
   { key: 'updatedAt', label: 'Updated', sortable: true },
 ]
 
-/** Every stored profile at a glance. Editing starts from a row. */
 const PAGE_SIZES = [15, 30, 50]
 
-/** A scenario can feed half a dozen systems; the row shows two and counts the rest. */
-// One name plus a count: enough to recognise the profile, narrow enough that every
-// row stays a single line. The full list is in the tooltip and in the editor.
+/**
+ * One name plus a count of the rest. A scenario can feed half a dozen systems, and naming them all
+ * would make the row three lines tall; the full list is in the tooltip and on the editor's tabs.
+ */
 function SystemPills({ names, shown = 1 }) {
   if (names.length === 0) return <span className="muted">—</span>
 
@@ -33,6 +33,7 @@ function SystemPills({ names, shown = 1 }) {
   )
 }
 
+/** Every stored profile at a glance. Editing starts from a row. */
 export default function ProfileTable({
   query,
   onQueryChange,
@@ -197,9 +198,12 @@ export default function ProfileTable({
                       <button className="btn btn-sm" title="Duplicate" onClick={() => onDuplicate(item)}>
                         <Icon.Copy />
                       </button>
-                      <button className="btn btn-sm btn-danger" title="Delete" onClick={() => onDelete(item)}>
-                        <Icon.Trash />
-                      </button>
+                      {/* Only offered to accounts the API would actually let delete. */}
+                      {onDelete && (
+                        <button className="btn btn-sm btn-danger" title="Delete" onClick={() => onDelete(item)}>
+                          <Icon.Trash />
+                        </button>
+                      )}
                     </span>
                   </td>
                 </tr>

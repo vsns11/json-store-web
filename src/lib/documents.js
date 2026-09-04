@@ -33,12 +33,12 @@ export function nextDocumentName(texts) {
   return `system${index}`
 }
 
-/** Renaming keeps the documents in a predictable order. */
+/**
+ * Renaming keeps every document where it was. Sorting here would move the tab out from under the
+ * cursor on each keystroke, since the name is edited in place.
+ */
 export function renameDocument(texts, from, to) {
-  const renamed = Object.fromEntries(
-    Object.entries(texts).map(([name, text]) => [name === from ? to : name, text]),
-  )
-  return sortByName(renamed)
+  return Object.fromEntries(Object.entries(texts).map(([name, text]) => [name === from ? to : name, text]))
 }
 
 export function sortByName(texts) {

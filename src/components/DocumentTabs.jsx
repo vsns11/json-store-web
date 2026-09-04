@@ -8,10 +8,12 @@ import { Icon } from './Icons.jsx'
 export default function DocumentTabs({ names, active, invalid, onSelect, onAdd, onRename, onRemove }) {
   return (
     <div className="doc-tabs">
-      {names.map((name) =>
+      {/* Keyed by position, not by name: renaming happens as you type, and a key that changed
+          with it would rebuild the input and drop the caret. */}
+      {names.map((name, index) =>
         name === active ? (
           <ActiveTab
-            key={name}
+            key={index}
             name={name}
             siblings={names.filter((other) => other !== name)}
             invalid={invalid.includes(name)}
@@ -20,7 +22,7 @@ export default function DocumentTabs({ names, active, invalid, onSelect, onAdd, 
             onRemove={onRemove}
           />
         ) : (
-          <button key={name} className="doc-tab" onClick={() => onSelect(name)}>
+          <button key={index} className="doc-tab" onClick={() => onSelect(name)}>
             {invalid.includes(name) && <span className="doc-tab-warning" title="Not valid JSON" />}
             {name}
           </button>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api/client.js'
 import {
   SAMPLE_PROFILE,
@@ -65,18 +65,20 @@ function draftOf(profile) {
  * Edits one profile. Mounted with a key, so opening another profile always
  * starts from a clean draft.
  */
-export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onBack, onDirtyChange }) {
+export default function ProfileEditor({ profile: opened, canDelete, onSaved, onDeleted, onBack, onDirtyChange }) {
   const toasts = useToasts()
   // The profile as the server last stored it. Saving a new profile fills this in, so the editor
   // carries on editing what it just created rather than creating it again.
   const [saved, setSaved] = useState(opened)
-  const [savedAt, setSavedAt] = useState(null)
+  const [reloading, setReloading] = useState(false)
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
 
   const [draft, setDraft] = useState(() => draftOf(opened))
-  const [active, setActive] = useState(() => Object.keys(toTexts(opened?.payload))[0])
+  const [chosen, setChosen] = useState(() => Object.keys(toTexts(opened?.payload))[0])
   const [baseline, setBaseline] = useState(() => snapshot(draft))
+  // The templates the baseline was composed from, so reverting puts the form back too.
+  const baselineTemplate = useRef(opened?.template ?? EMPTY_TEMPLATE)
   // A profile composed from templates remembers its selection, and can be edited as that form again.
   // Older ones do not, so their selection is worked out from the inputs instead.
   const isNew = !saved
@@ -88,6 +90,18 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [comparing, setComparing] = useState(false)
   const [dragging, setDragging] = useState(false)
+  // One line in the status bar saying what just happened. It replaces itself and then clears,
+  // so routine confirmations never pile up the way a stack of pop-ups does.
+  const [note, setNote] = useState(null)
+  const noteTimer = useRef(null)
+
+  const flash = useCallback((message) => {
+    setNote(message)
+    clearTimeout(noteTimer.current)
+    noteTimer.current = setTimeout(() => setNote(null), 4000)
+  }, [])
+
+  useEffect(() => () => clearTimeout(noteTimer.current), [])
 
   useEffect(() => {
     loadCatalog()
@@ -106,6 +120,8 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const names = Object.keys(draft.documents)
+  // The tab on screen: the one picked, unless it has since been renamed or reverted away.
+  const active = chosen in draft.documents ? chosen : names[0]
   const text = draft.documents[active] ?? ''
   const invalid = useMemo(() => invalidDocuments(draft.documents), [draft.documents])
   const parsed = useMemo(() => parseJson(text), [text])
@@ -148,7 +164,7 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
       changes.name = String(result.values.scenarioName)
     }
     patch(changes)
-    if (!(active in changes.documents)) setActive(Object.keys(changes.documents)[0] ?? DEFAULT_DOCUMENT)
+    if (!(active in changes.documents)) setChosen(Object.keys(changes.documents)[0] ?? DEFAULT_DOCUMENT)
   }
 
   const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
@@ -169,7 +185,7 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
   const save = async () => {
     if (invalid.length > 0) {
       toasts.error(`Fix the JSON in “${invalid[0]}” first`)
-      setActive(invalid[0])
+      setChosen(invalid[0])
       return
     }
     if (!draft.name.trim()) {
@@ -188,8 +204,8 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
       }
       const result = isNew ? await api.create(body) : await api.update(saved.id, body)
       setSaved(result)
-      setSavedAt(new Date())
       setBaseline(snapshot(draft))
+      baselineTemplate.current = result.template ?? EMPTY_TEMPLATE
       onSaved(result)
     } catch (error) {
       toasts.error(error.message)
@@ -200,6 +216,7 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
 
   /** Throws away local edits and loads the profile as it is stored. */
   const reload = async () => {
+    setReloading(true)
     try {
       const stored = await api.get(saved.id)
       const fresh = draftOf(stored)
@@ -207,10 +224,13 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
       setDraft(fresh)
       setBaseline(snapshot(fresh))
       setTemplate(stored.template ?? EMPTY_TEMPLATE)
-      setActive(Object.keys(fresh.documents)[0])
-      toasts.info('Loaded the stored version')
+      baselineTemplate.current = stored.template ?? EMPTY_TEMPLATE
+      setChosen(Object.keys(fresh.documents)[0])
+      flash('Loaded the stored version')
     } catch (failure) {
       toasts.error(failure.message)
+    } finally {
+      setReloading(false)
     }
   }
 
@@ -228,7 +248,7 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text)
-      toasts.info('JSON copied to clipboard')
+      flash(`Copied “${active}” to the clipboard`)
     } catch {
       toasts.error('The browser blocked clipboard access')
     }
@@ -236,13 +256,16 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
 
   const loadFile = async (file) => {
     if (!file) return
-    const { name, text: contents } = await readJsonFile(file)
-    const formatted = formatJson(contents)
-    patchText(formatted.ok ? formatted.text : contents)
-    if (!draft.name) patch({ name })
-    toasts[formatted.ok ? 'info' : 'error'](
-      formatted.ok ? `Loaded ${file.name}` : `Loaded ${file.name}, but it is not valid JSON`,
-    )
+    try {
+      const { name, text: contents } = await readJsonFile(file)
+      const formatted = formatJson(contents)
+      patchText(formatted.ok ? formatted.text : contents)
+      if (!draft.name.trim()) patch({ name })
+      if (formatted.ok) flash(`Loaded ${file.name}`)
+      else toasts.error(`${file.name} is not valid JSON — it was loaded so you can fix it`)
+    } catch {
+      toasts.error(`Could not read ${file.name}`)
+    }
   }
 
   const jumpToError = () => {
@@ -256,16 +279,24 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
   // Anything that navigates away needs to know there is unsaved work to warn about.
   useEffect(() => {
     onDirtyChange?.(dirty)
-    return () => onDirtyChange?.(false)
   }, [dirty, onDirtyChange])
 
-  // Keyboard shortcuts read the latest handlers through a ref, so the listener is bound once.
+  // Closing the editor always leaves the app with nothing outstanding.
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
+
+  // Keyboard shortcuts read the latest handlers through a ref, so the listener is bound once
+  // instead of being torn down and rebuilt on every keystroke.
   const latest = useRef({})
-  latest.current = { save, format: () => transform(formatJson), back: onBack }
+  useEffect(() => {
+    latest.current = { save, format: () => transform(formatJson), back: onBack }
+  })
+
   useEffect(() => {
     const onKeyDown = (event) => {
-      // Esc goes back to the table, unless a dialog is open and wants it first.
-      if (event.key === 'Escape' && !window.document.querySelector('.overlay')) {
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)
+      // Esc goes back to the table — but not out from under someone typing, and not while a
+      // dialog is open, since the dialog wants it first.
+      if (event.key === 'Escape' && !typing && !window.document.querySelector('.overlay')) {
         latest.current.back?.()
         return
       }
@@ -312,20 +343,22 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
           names={names}
           active={active}
           invalid={invalid}
-          onSelect={setActive}
+          onSelect={setChosen}
           onAdd={() => {
             const name = nextDocumentName(draft.documents)
             patch({ documents: sortByName({ ...draft.documents, [name]: '{}' }) })
-            setActive(name)
+            setChosen(name)
           }}
           onRename={(from, to) => {
             patch({ documents: renameDocument(draft.documents, from, to) })
-            setActive(to)
+            setChosen(to)
           }}
           onRemove={(name) => {
+            // The tab strip only offers this while more than one system is present, so there is
+            // always something left to show afterwards.
             const { [name]: removed, ...rest } = draft.documents
             patch({ documents: rest })
-            setActive(Object.keys(rest)[0])
+            setChosen(Object.keys(rest)[0])
           }}
         />
       )}
@@ -404,12 +437,16 @@ export default function ProfileEditor({ profile: opened, onSaved, onDeleted, onB
         dirty={dirty}
         saving={saving}
         isNew={isNew}
-        savedAt={savedAt}
+        canDelete={canDelete}
+        savedAt={saved?.updatedAt}
+        note={note}
+        reloading={reloading}
         onReload={saved ? reload : null}
         onSave={save}
         onRevert={() => {
           setDraft(JSON.parse(baseline))
-          toasts.info('Reverted to the last saved version')
+          setTemplate(baselineTemplate.current)
+          flash('Went back to the last saved version')
         }}
         onDelete={() => setConfirmingDelete(true)}
         onJumpToError={jumpToError}

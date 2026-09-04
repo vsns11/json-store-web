@@ -2,16 +2,36 @@ import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import { formatBytes, formatRelativeTime } from '../lib/json.js'
 
-// "Saved just now" would stay "just now" forever without a nudge, so re-render
-// the label every half minute for as long as there is one to show.
-function useTick(active) {
+/**
+ * Where the draft stands against the stored profile. This is the only place the app reports a
+ * save: it stays on screen instead of flashing past, so there is nothing to catch or dismiss.
+ */
+function SaveState({ dirty, savedAt }) {
+  // "Saved just now" would stay "just now" forever without a nudge, so re-render it now and then.
   const [, setTick] = useState(0)
+  const settled = !dirty && Boolean(savedAt)
 
   useEffect(() => {
-    if (!active) return undefined
+    if (!settled) return undefined
     const timer = setInterval(() => setTick((count) => count + 1), 30_000)
     return () => clearInterval(timer)
-  }, [active])
+  }, [settled])
+
+  if (dirty) {
+    return (
+      <span className="save-state is-unsaved">
+        <span className="unsaved-dot" /> Unsaved changes
+      </span>
+    )
+  }
+
+  if (!savedAt) return <span className="save-state is-new">Not saved yet</span>
+
+  return (
+    <span className="save-state is-saved">
+      <Icon.Check /> Saved {formatRelativeTime(savedAt)}
+    </span>
+  )
 }
 
 export default function StatusBar({
@@ -21,22 +41,24 @@ export default function StatusBar({
   dirty,
   saving,
   isNew,
+  canDelete,
   savedAt,
+  note,
+  reloading,
   onSave,
   onReload,
   onRevert,
   onDelete,
   onJumpToError,
 }) {
-  useTick(Boolean(savedAt) && !dirty)
-
   return (
     <footer className="statusbar">
       <span className={`status-pill ${parsed.ok ? 'is-valid' : parsed.empty ? 'is-empty' : 'is-invalid'}`}>
         <span className="status-dot" /> {parsed.ok ? 'Valid JSON' : parsed.empty ? 'Empty' : 'Invalid'}
       </span>
 
-      {parsed.ok && (
+      {/* The counts step aside while a note is showing, so neither has to be truncated. */}
+      {parsed.ok && !note && (
         <span className="status-metrics">
           <span title="Size once stored, with whitespace removed">{formatBytes(size)}</span>
           <span>{shape.keys} keys</span>
@@ -54,31 +76,32 @@ export default function StatusBar({
       )}
 
       <div className="status-actions">
-        {dirty ? (
-          <span className="save-state is-unsaved">
-            <span className="unsaved-dot" /> Unsaved changes
-          </span>
-        ) : (
-          savedAt && (
-            <span className="save-state is-saved">
-              <Icon.Check /> Saved {formatRelativeTime(savedAt)}
-            </span>
-          )
-        )}
+        {/* What just happened, if anything: one slot that replaces itself and then clears. */}
+        {note && <span className="status-note">{note}</span>}
+
+        <SaveState dirty={dirty} savedAt={savedAt} />
 
         {onReload && (
-          <button className="btn btn-sm" onClick={onReload} title="Discard local edits and load the stored version">
-            <Icon.Refresh /> Load stored
+          <button
+            className="btn btn-sm"
+            onClick={onReload}
+            disabled={reloading}
+            title="Load the stored version, discarding any edits here"
+          >
+            {reloading ? <span className="spinner" /> : <Icon.Refresh />} Reload
           </button>
         )}
-        {!isNew && (
+
+        {!isNew && canDelete && (
           <button className="btn btn-sm btn-danger" onClick={onDelete} title="Delete this profile">
             <Icon.Trash /> Delete
           </button>
         )}
+
         <button className="btn btn-sm" onClick={onRevert} disabled={!dirty}>
           <Icon.Revert /> Revert
         </button>
+
         <button className="btn btn-sm btn-primary" onClick={onSave} disabled={saving || !parsed.ok || !dirty}>
           {saving ? <span className="spinner" /> : <Icon.Save />}
           {isNew ? 'Save profile' : 'Save changes'}

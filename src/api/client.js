@@ -67,7 +67,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     })
-    setToken(session.token)
+    setToken(session.accessToken)
     return session
   },
 

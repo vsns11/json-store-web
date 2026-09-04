@@ -10,16 +10,21 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState(hasToken() ? 'checking' : 'anonymous')
+  // Set when the API rejected a token that had been working, so the sign-in screen can say why
+  // it is being shown again rather than appearing out of nowhere.
+  const [expired, setExpired] = useState(false)
 
   const signOut = useCallback(() => {
     setToken(null)
     setUser(null)
+    setExpired(false)
     setStatus('anonymous')
   }, [])
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setUser(null)
+      setExpired(true)
       setStatus('anonymous')
     })
     return () => setUnauthorizedHandler(null)
@@ -37,21 +42,27 @@ export function AuthProvider({ children }) {
         setStatus('signed-in')
       })
       .catch(() => {
-        if (!cancelled) signOut()
+        // A rejected token has already been cleared by the API client, which also flags the
+        // session as expired; anything else simply leaves the sign-in screen as it was.
+        if (!cancelled) setStatus('anonymous')
       })
     return () => {
       cancelled = true
     }
-  }, [signOut])
+  }, [])
 
   const signIn = useCallback(async (username, password) => {
     const session = await api.login(username, password)
-    setUser({ username: session.username, roles: session.roles })
+    setUser(session.user)
+    setExpired(false)
     setStatus('signed-in')
     return session
   }, [])
 
-  const value = useMemo(() => ({ user, status, signIn, signOut }), [user, status, signIn, signOut])
+  const value = useMemo(
+    () => ({ user, status, expired, signIn, signOut }),
+    [user, status, expired, signIn, signOut],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

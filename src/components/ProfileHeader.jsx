@@ -13,7 +13,7 @@ export default function ProfileHeader({ name, description, tags, onChange, onBac
           <Icon.Back /> All profiles
         </button>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="header-fields">
           <input
             className="title-input"
             value={name}

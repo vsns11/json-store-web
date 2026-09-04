@@ -242,7 +242,6 @@
   min-width: 240px;
   max-width: min(520px, 90vw);
   pointer-events: auto;
-  cursor: pointer;
   padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -256,6 +255,34 @@
 .toast.is-success { border-left-color: var(--success); }
 .toast.is-error { border-left-color: var(--danger); }
 .toast.is-info { border-left-color: var(--accent); }
+
+.toast-message {
+  flex: 1;
+}
+
+/* How many times the same message arrived, in place of a second copy of it. */
+.toast-count {
+  padding: 1px 6px;
+  background: var(--surface-sunken);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.toast-close {
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: var(--text-faint);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast-close:hover {
+  color: var(--text);
+}
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-8px); }

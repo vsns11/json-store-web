@@ -3,7 +3,7 @@ import { Icon } from './Icons.jsx'
 
 const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname)
 
-export default function LoginScreen({ onSignIn }) {
+export default function LoginScreen({ onSignIn, expired }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -29,7 +29,9 @@ export default function LoginScreen({ onSignIn }) {
           <span>JSON Store</span>
         </div>
 
-        <p className="login-lead">Sign in with your directory account.</p>
+        <p className="login-lead">
+          {expired ? 'Your session has ended. Sign in again to carry on.' : 'Sign in with your directory account.'}
+        </p>
 
         <label className="login-field">
           <span>Username</span>

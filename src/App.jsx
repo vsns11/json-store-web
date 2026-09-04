@@ -12,6 +12,9 @@ import { useAuth } from './hooks/useAuth.jsx'
 import { useProfiles } from './hooks/useProfiles.js'
 import { useToasts } from './hooks/useToasts.jsx'
 
+/** Deleting is reserved for the admin group in the directory, the same rule the API enforces. */
+const mayDelete = (user) => Boolean(user?.roles?.includes('ADMINS'))
+
 /**
  * Which sidebar entry is highlighted. Editing an existing profile is reached from the table rather
  * than the rail, so nothing is marked then.
@@ -22,7 +25,7 @@ function railSelection(view, selected) {
 }
 
 export default function App() {
-  const { user, status, signIn, signOut } = useAuth()
+  const { user, status, expired, signIn, signOut } = useAuth()
   const toasts = useToasts()
   const searchRef = useRef(null)
   const { query, update, page, stats, loading, error, refresh } = useProfiles(toasts.error, status === 'signed-in')
@@ -122,7 +125,7 @@ export default function App() {
       setEditorKey(copy.id)
       setView('editor')
     } catch (failure) {
-      showError(failure.message)
+      toasts.error(failure.message)
     }
   }
 
@@ -150,7 +153,7 @@ export default function App() {
   if (status !== 'signed-in') {
     return (
       <>
-        <LoginScreen onSignIn={signIn} />
+        <LoginScreen onSignIn={signIn} expired={expired} />
         <Toasts />
       </>
     )
@@ -196,12 +199,13 @@ export default function App() {
               onNew={startNewProfile}
               onOpen={openProfile}
               onDuplicate={duplicateProfile}
-              onDelete={setPendingDelete}
+              onDelete={mayDelete(user) ? setPendingDelete : null}
             />
           ) : (
             <ProfileEditor
               key={editorKey}
               profile={selected}
+              canDelete={mayDelete(user)}
               onDirtyChange={setEditorDirty}
               onBack={showProfiles}
               onSaved={(profile) => {

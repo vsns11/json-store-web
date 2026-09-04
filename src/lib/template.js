@@ -13,7 +13,7 @@ const PLACEHOLDER = /\$\{([\w.]+)\}/g
  * The field keys the selected bodies actually substitute. A field a body never mentions changes
  * nothing, so it is not worth asking for, and is left out of the form.
  */
-export function usedFieldKeys(catalog, selection) {
+function usedFieldKeys(catalog, selection) {
   const keys = new Set()
 
   const scan = (value) => {
@@ -30,7 +30,7 @@ export function usedFieldKeys(catalog, selection) {
   return keys
 }
 
-export function fragmentsFor(catalog, selection) {
+function fragmentsFor(catalog, selection) {
   if (!catalog) return []
   return catalog.groups
     .map((group) => catalog.fragments.find((fragment) => fragment.id === selection[group.id]))
@@ -95,7 +95,7 @@ export function compose(catalog, selection, values) {
  * The documents a selection builds, one per system. A fragment writes into every system it names,
  * so choosing a single scenario can already produce an API request, an event and its assertions.
  */
-export function composeDocument(catalog, selection, values) {
+function composeDocument(catalog, selection, values) {
   const documents = {}
   for (const fragment of fragmentsFor(catalog, selection)) {
     for (const [system, body] of Object.entries(fragment.documents ?? {})) {

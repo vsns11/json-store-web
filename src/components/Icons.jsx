@@ -92,12 +92,6 @@ export const Icon = {
       <path d="M4 10 8 6M4 10l4 4" />
     </svg>
   ),
-  Eye: (props) => (
-    <svg {...base} {...props}>
-      <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  ),
   Lock: (props) => (
     <svg {...base} {...props}>
       <rect x="4" y="10" width="16" height="10" rx="2" />
@@ -136,12 +130,6 @@ export const Icon = {
     <svg {...base} {...props}>
       <path d="M20 12a8 8 0 1 1-2.3-5.6" />
       <path d="M20 4v5h-5" />
-    </svg>
-  ),
-  Info: (props) => (
-    <svg {...base} {...props}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v5M12 8h.01" />
     </svg>
   ),
   File: (props) => (

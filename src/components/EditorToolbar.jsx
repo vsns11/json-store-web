@@ -47,7 +47,7 @@ export default function EditorToolbar({
 
       <span className="toolbar-divider" />
 
-      <div className="segmented" style={{ marginLeft: 'auto' }}>
+      <div className="segmented toolbar-views">
         <button
           className={view === 'form' ? 'is-active' : ''}
           onClick={() => onViewChange('form')}
