@@ -29,22 +29,30 @@ sortable columns, pagination and search. It asks the API for one page at a time,
 for when there are thousands of them. Editing starts from a row: **Edit** opens the profile, and
 saving brings you back to the table. Profiles are created, updated and deleted from here.
 
-**Three ways to work on a profile, two of them always available**
+**Two ways to look at a profile, one way to change it**
 
-- **Form** — always available. For a profile that came from templates it opens on this tab, showing a
-  card per template it was built from, holding exactly the fields that template substitutes — the values that
-  were taken as input, and nothing else. The pickers are not repeated here: which templates were used
-  is settled, and each card is titled with its own. Changing a field rebuilds the inputs from those
-  templates; if they were edited by hand since, the form says so before you overwrite that work.
+- **Form** — where every input comes from. A profile that came from templates opens here, showing a
+  card per template it was built from, holding exactly the fields that template substitutes — the values
+  that were taken as input, and nothing else. The pickers are not repeated: which templates were used is
+  settled, and each card is titled with its own. Changing a field rebuilds the inputs from those
+  templates; if they were changed elsewhere since, the form says so before you overwrite that work.
 
   Profiles saved before the selection was recorded still get the form: their inputs are matched against
   the catalogue — every literal a fragment writes has to be present and equal — and the values are read
   back out of them. A field the catalogue gained later falls back to its default rather than failing the
-  match, and saving records what was matched. Inputs that match nothing, like a document written by
-  hand, get no form rather than a guess.
+  match, and saving records what was matched. Inputs that match nothing, like a profile written straight
+  against the API, get the pickers instead of a guess: choosing a template rebuilds them.
 
-A profile's inputs are a **set of named documents**, one per system the scenario feeds. The editor
-shows a tab per document; the name is editable in place, and `+` adds another.
+- **Tree** — the inputs the form has built, collapsed into a browsable tree. Read-only, like the rest of
+  this half of the screen.
+
+There is deliberately no JSON editor. Inputs are only ever written by the form, so every profile can be
+traced back to a template and the fields that were typed into it, and none of them drift into a shape
+the catalogue does not describe. Copy and Download hand a document out when you want the raw JSON, and
+the API is still there for anything the form cannot express.
+
+A profile's inputs are a **set of named documents**, one per system the scenario feeds. The tree shows a
+tab per document; which documents exist is decided by the templates, not by hand.
 
 One form fills them all. A single fragment writes into every system it names, so choosing *Checkout*,
 *Returning customer*, *Card — declined*, *Stock reserved*, *Email and SMS* and *Expect failure* produces
@@ -52,20 +60,12 @@ six documents — an orders API request, a payment charge, an inventory reservat
 notifications to expect and the assertions — from one set of fields. A value typed once reaches every
 document that mentions it.
 
-- **Editor** — a syntax-coloured editor: keys, strings, numbers, booleans and punctuation are coloured
-  as you type, with line numbers, `Tab` indentation, and live validation that reports the exact line and
-  column of the first syntax error (click the error to jump the caret there). Colouring is painted on a
-  layer under a transparent textarea, so the caret, selection, undo and native shortcuts all behave
-  exactly as they normally would.
-- **Tree** — the same document collapsed into a browsable tree.
-
 **Building a big profile from small ones**
 
 There is one **New profile**, and it opens the same screen editing does. On its Form tab, pick a
 scenario and optionally a customer, payment, delivery and expectation module, and the merged inputs
-build up as you fill in the fields they ask for; leave every picker on *none* and write the inputs
-yourself on the Editor tab instead. The catalogue comes from the API, so adding fragments is a
-configuration change on that side.
+build up as you fill in the fields they ask for. The catalogue comes from the API, so offering a new
+kind of profile is a configuration change on that side rather than a code change here.
 
 The selection is stored with the profile, so **Edit** reopens that same form with everything still
 filled in — the templates chosen and the values typed — rather than only the raw JSON.
@@ -85,8 +85,7 @@ filled in — the templates chosen and the values typed — rather than only the
 
 **Everything else**
 
-- Pretty-print, minify, sort keys A→Z; live size, key, node and depth counts
-- Import a `.json` file by picking it or dropping it on the editor; copy and download
+- Live size, key, node and depth counts for the document on screen; copy and download
 - Full-text search across names, descriptions, tags and the inputs themselves
 - Name, description and up to 12 tags per profile
 - A sidebar that expands and collapses in place, light and dark themes
@@ -94,7 +93,7 @@ filled in — the templates chosen and the values typed — rather than only the
 - Sign-in against the directory the API is pointed at; the session token lives in the tab only
 - A session is renewed in the background before its token runs out, for as long as the API allows;
   if it does run out mid-edit, the sign-in card is laid over the page and nothing typed is lost
-- `⌘/Ctrl+S` save · `⌘/Ctrl+⇧F` format · `⌘/Ctrl+K` search · `Tab`/`⇧Tab` indent · `Enter` keeps the indent
+- `⌘/Ctrl+S` save · `⌘/Ctrl+K` search · `Esc` back to the list
 
 ## Getting started
 
@@ -201,7 +200,7 @@ App                      which view is showing, which profile is open, the theme
 ├── ProfileTable         nothing of its own — everything arrives as props
 └── ProfileEditor        the draft being edited, until it is saved or discarded
     ├── TemplateForm     nothing of its own
-    └── JsonEditor       nothing of its own
+    └── JsonTree         which branches are open
 ```
 
 Data flows one way — down as props — and changes flow back up as function calls. When you cannot work
@@ -239,16 +238,16 @@ Components map one-to-one onto what you see, and each takes plain props with no 
 | Component | Shows |
 | --- | --- |
 | `ProfileTable` | The list of every profile, with sorting and paging |
-| `ProfileEditor` | One profile, new or existing: toolbar, form/editor/tree, status bar |
+| `ProfileEditor` | One profile, new or existing: toolbar, form or tree, status bar |
 | `ProfileHeader` | The profile's own name, description and tags |
 | `CompareDialog` | Picking another profile and listing what differs |
-| `JsonEditor` · `JsonTree` | The two ways of viewing inputs |
+| `JsonTree` | The inputs the form built, as a browsable tree |
 | `TemplateForm` | The template pickers and the cards of fields they ask for |
 | `DocumentTabs` | One tab per system the profile feeds |
 | `FormField` | Every input control the template form can draw (see below) |
 | `Sidebar` | Navigation |
 | `TopBar` | Brand, the signed-in user, store totals and search |
-| `EditorToolbar` · `StatusBar` · `TagEditor` | The controls around the editor |
+| `EditorToolbar` · `StatusBar` · `TagEditor` | The controls around the form and the tree |
 | `LoginScreen` · `ConfirmDialog` · `ShortcutsDialog` · `Toasts` · `ErrorBoundary` | Sign-in and the overlays |
 
 ### Adding a field to a template

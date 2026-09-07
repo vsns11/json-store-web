@@ -3,10 +3,7 @@ import { shortcut } from '../lib/platform.js'
 
 const SHORTCUTS = [
   [shortcut('S'), 'Save the open profile'],
-  [shortcut('⇧', 'F'), 'Format the JSON'],
   [shortcut('K'), 'Focus the search box'],
-  ['Tab / ⇧ Tab', 'Indent or outdent the line, or the selected lines'],
-  ['Enter', 'New line at the same indent; deeper after { or ['],
   ['Enter or ,', 'Commit a tag while typing one'],
   ['Esc', 'Close a dialog, or go back to the profile list'],
 ]

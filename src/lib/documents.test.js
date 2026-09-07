@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { invalidDocuments, nextDocumentName, renameDocument, sortByName, toPayload, toTexts } from './documents.js'
+import { invalidDocuments, sortByName, toPayload, toTexts } from './documents.js'
 import { describeValue, diffJson } from './diff.js'
 import { tokenizeJson } from './highlight.js'
 
@@ -15,18 +15,11 @@ describe('documents', () => {
     expect(toTexts(undefined)).toEqual({ main: '' })
   })
 
-  it('names the documents that do not parse', () => {
+  it('names the documents the form has not built yet', () => {
     expect(invalidDocuments({ a: '{}', b: '{', c: '' })).toEqual(['b', 'c'])
   })
 
-  it('picks a name no document has yet', () => {
-    expect(nextDocumentName({})).toBe('main')
-    expect(nextDocumentName({ main: '' })).toBe('system2')
-    expect(nextDocumentName({ main: '', system2: '' })).toBe('system3')
-  })
-
-  it('renames in place without reordering', () => {
-    expect(Object.keys(renameDocument({ b: '1', a: '2' }, 'b', 'z'))).toEqual(['z', 'a'])
+  it('sorts by name, so the tabs keep their order between loads', () => {
     expect(Object.keys(sortByName({ b: '1', a: '2' }))).toEqual(['a', 'b'])
   })
 })

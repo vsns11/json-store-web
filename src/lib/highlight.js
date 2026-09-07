@@ -18,7 +18,7 @@ const TOKEN = new RegExp(
 )
 
 /** Text above this size is shown unhighlighted: colouring it costs more than it is worth. */
-export const HIGHLIGHT_LIMIT = 200_000
+const HIGHLIGHT_LIMIT = 200_000
 
 /**
  * @returns {{text: string, kind: 'key'|'string'|'number'|'boolean'|'null'|'punct'|'plain'}[]}

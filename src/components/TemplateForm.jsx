@@ -78,7 +78,7 @@ export default function TemplateForm({
       {cards.length === 0 && (
         <p className="muted template-empty">
           {showPickers
-            ? 'Pick a template to fill in its fields, or write the inputs yourself on the Editor tab.'
+            ? 'Pick a template above to fill in its fields. The inputs are built from what you choose.'
             : 'This profile has no templates behind it.'}
         </p>
       )}

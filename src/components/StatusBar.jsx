@@ -36,7 +36,7 @@ function SaveState({ dirty, savedAt }) {
 }
 
 export default function StatusBar({
-  parsed,
+  built,
   shape,
   size,
   dirty,
@@ -50,16 +50,15 @@ export default function StatusBar({
   onReload,
   onRevert,
   onDelete,
-  onJumpToError,
 }) {
   return (
     <footer className="statusbar">
-      <span className={`status-pill ${parsed.ok ? 'is-valid' : parsed.empty ? 'is-empty' : 'is-invalid'}`} role="status">
-        <span className="status-dot" /> {parsed.ok ? 'Valid JSON' : parsed.empty ? 'Empty' : 'Invalid'}
+      <span className={`status-pill ${built ? 'is-valid' : 'is-empty'}`} role="status">
+        <span className="status-dot" /> {built ? 'Inputs ready' : 'No inputs yet'}
       </span>
 
       {/* The counts step aside while a note is showing, so neither has to be truncated. */}
-      {parsed.ok && !note && (
+      {built && !note && (
         <span className="status-metrics">
           <span title="Size once stored, with whitespace removed">{formatBytes(size)}</span>
           <span>{shape.keys} keys</span>
@@ -68,13 +67,7 @@ export default function StatusBar({
         </span>
       )}
 
-      {parsed.empty && <span className="muted">Type the inputs, paste them, drop a .json file, or load a sample</span>}
-
-      {!parsed.ok && !parsed.empty && (
-        <button className="btn btn-sm btn-ghost status-error" onClick={onJumpToError} title="Jump to the problem">
-          Line {parsed.error.line}, column {parsed.error.column} — {parsed.error.message}
-        </button>
-      )}
+      {!built && <span className="muted">Pick a template on the Form tab to build the inputs</span>}
 
       <div className="status-actions">
         {/* What just happened, if anything: one slot that replaces itself and then clears. */}
@@ -106,7 +99,7 @@ export default function StatusBar({
         <button
           className="btn btn-sm btn-primary"
           onClick={onSave}
-          disabled={saving || !parsed.ok || !dirty}
+          disabled={saving || !built || !dirty}
           title={`Save (${shortcut('S')})`}
         >
           {saving ? <span className="spinner" /> : <Icon.Save />}

@@ -18,27 +18,14 @@ export function toPayload(texts) {
   return Object.fromEntries(Object.entries(texts).map(([name, text]) => [name, JSON.parse(text)]))
 }
 
-/** The documents that are not usable yet, so saving can say which one to look at. */
+/**
+ * The documents that hold nothing usable. Inputs are only ever written by the template form, so
+ * this means the form has not built them yet rather than that someone mistyped something.
+ */
 export function invalidDocuments(texts) {
   return Object.entries(texts)
     .filter(([, text]) => !parseJson(text).ok)
     .map(([name]) => name)
-}
-
-/** A name no existing document has, for the "add" button. */
-export function nextDocumentName(texts) {
-  if (!(DEFAULT_DOCUMENT in texts)) return DEFAULT_DOCUMENT
-  let index = 2
-  while (`system${index}` in texts) index += 1
-  return `system${index}`
-}
-
-/**
- * Renaming keeps every document where it was. Sorting here would move the tab out from under the
- * cursor on each keystroke, since the name is edited in place.
- */
-export function renameDocument(texts, from, to) {
-  return Object.fromEntries(Object.entries(texts).map(([name, text]) => [name === from ? to : name, text]))
 }
 
 export function sortByName(texts) {

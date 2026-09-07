@@ -14,9 +14,7 @@
 .input:focus-visible,
 .title-input:focus-visible,
 .description-input:focus-visible,
-.code-input:focus-visible,
-.tag-input:focus-visible,
-.doc-tab-name:focus-visible {
+.tag-input:focus-visible {
   outline: none;
 }
 

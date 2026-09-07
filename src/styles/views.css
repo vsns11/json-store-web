@@ -464,12 +464,6 @@
   min-width: 0;
 }
 
-.toolbar-divider {
-  width: 1px;
-  height: 18px;
-  background: var(--border);
-}
-
 .segmented {
   display: flex;
   padding: 2px;
@@ -494,43 +488,12 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Code editor */
+/* Holds whichever of the two views is on screen. */
 .editor-body {
-  position: relative;
+  display: flex;
   flex: 1;
   min-height: 0;
-  display: flex;
   overflow: hidden;
-}
-
-.gutter {
-  flex-shrink: 0;
-  padding: var(--code-padding-y) 10px var(--code-padding-y) 14px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  color: var(--text-faint);
-  font-family: var(--mono);
-  font-size: var(--code-size);
-  line-height: var(--code-line);
-  text-align: right;
-  user-select: none;
-  overflow: hidden;
-}
-
-.gutter div.is-error {
-  color: var(--danger);
-  font-weight: 700;
-}
-
-/* A stripe behind the line the parser stopped on, scrolled with the text. */
-.code-error-line {
-  position: absolute;
-  top: calc(var(--code-padding-y) + (var(--line) - 1) * var(--code-line));
-  left: 0;
-  right: 0;
-  height: var(--code-line);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  pointer-events: none;
 }
 
 /* One tab per system the profile feeds. */
@@ -567,113 +530,6 @@
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
   color: var(--accent);
-  cursor: default;
-}
-
-.doc-tab-name {
-  min-width: 4ch;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-bottom: 1px dashed transparent;
-  outline: none;
-  color: inherit;
-  font: inherit;
-}
-
-.doc-tab-name:hover {
-  border-bottom-color: currentColor;
-}
-
-.doc-tab-name:focus {
-  border-bottom-color: currentColor;
-}
-
-.doc-tab-remove {
-  padding: 0 2px;
-  background: none;
-  border: none;
-  color: inherit;
-  opacity: 0.6;
-  cursor: pointer;
-}
-
-.doc-tab-remove:hover {
-  opacity: 1;
-}
-
-.doc-tab-add {
-  padding: 4px 7px;
-  border-style: dashed;
-}
-
-.doc-tab-warning {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--danger);
-}
-
-/* The textarea and the coloured layer must lay out identically, or the caret drifts. */
-.code-area {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-
-.code-layer,
-.code-input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: var(--code-padding);
-  border: none;
-  font-family: var(--mono);
-  font-size: var(--code-size);
-  line-height: var(--code-line);
-  tab-size: 2;
-  white-space: pre;
-  word-break: normal;
-  overflow-wrap: normal;
-}
-
-.code-layer {
-  overflow: hidden;
-  color: var(--text);
-  pointer-events: none;
-}
-
-.code-input {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  outline: none;
-  resize: none;
-  overflow: auto;
-  /* Only the text is hidden: the caret, the selection and undo all stay native. */
-  color: transparent;
-  caret-color: var(--text);
-}
-
-.code-input::placeholder {
-  color: var(--text-faint);
-}
-
-.code-input::selection {
-  background: color-mix(in srgb, var(--accent) 30%, transparent);
-}
-
-.drop-target {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  border: 2px dashed var(--accent);
-  border-radius: var(--radius-sm);
-  color: var(--accent);
-  font-weight: 600;
-  pointer-events: none;
 }
 
 /* Tree view */
@@ -802,13 +658,6 @@
   .status-metrics {
     display: none;
   }
-}
-
-.status-error {
-  color: var(--danger);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Saved or not, said plainly next to the buttons and left there. */

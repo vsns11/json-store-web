@@ -1,8 +1,4 @@
-/** Reading a .json file the user picked or dropped, and handing one back. */
-
-export async function readJsonFile(file) {
-  return { name: file.name.replace(/\.json$/i, ''), text: await file.text() }
-}
+/** Handing a document back as a .json file. */
 
 export function downloadJson(name, text) {
   const blob = new Blob([text], { type: 'application/json' })

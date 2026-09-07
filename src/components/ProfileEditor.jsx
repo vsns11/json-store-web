@@ -1,24 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api/client.js'
-import {
-  SAMPLE_PROFILE,
-  byteSize,
-  describeShape,
-  formatJson,
-  minifyJson,
-  parseJson,
-  sortJsonKeys,
-} from '../lib/json.js'
-import {
-  DEFAULT_DOCUMENT,
-  invalidDocuments,
-  nextDocumentName,
-  renameDocument,
-  sortByName,
-  toPayload,
-  toTexts,
-} from '../lib/documents.js'
-import { downloadJson, readJsonFile } from '../lib/files.js'
+import { byteSize, describeShape, parseJson, sortJsonKeys } from '../lib/json.js'
+import { DEFAULT_DOCUMENT, invalidDocuments, sortByName, toPayload, toTexts } from '../lib/documents.js'
+import { downloadJson } from '../lib/files.js'
 import { loadCatalog } from '../lib/catalog.js'
 import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
 import { inferTemplate } from '../lib/templateMatch.js'
@@ -27,7 +11,6 @@ import CompareDialog from './CompareDialog.jsx'
 import DocumentTabs from './DocumentTabs.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
-import JsonEditor from './JsonEditor.jsx'
 import JsonTree from './JsonTree.jsx'
 import ProfileHeader from './ProfileHeader.jsx'
 import TemplateForm from './TemplateForm.jsx'
@@ -41,27 +24,26 @@ const EMPTY_TEMPLATE = { selection: {}, values: {} }
 const hasSelection = (template) => Object.values(template?.selection ?? {}).some(Boolean)
 
 /**
- * Which of the three tabs can actually be drawn. The form is always available — without a template
- * behind it, it offers the pickers — but the tree needs inputs that parse.
+ * Which of the two tabs can be drawn. The form is where inputs come from, so it is always
+ * available; the tree only has something to show once the form has built the inputs.
  */
-function chooseView(chosen, parses) {
-  if (chosen === 'form') return 'form'
-  if (chosen === 'tree' && parses) return 'tree'
-  return 'code'
+function chooseView(chosen, built) {
+  return chosen === 'tree' && built ? 'tree' : 'form'
 }
 
-/** The editable form of a stored profile: its details plus one text document per system. */
+/** The editable form of a stored profile: its details plus one document per system. */
 function draftOf(profile) {
   return {
     name: profile?.name ?? '',
     description: profile?.description ?? '',
     tags: profile?.tags ?? [],
-    // One document per system this profile feeds, held as text while it is being edited.
+    // One document per system this profile feeds, held as text so the tree and the size
+    // counts read exactly what will be stored.
     documents: toTexts(profile?.payload),
   }
 }
 
-/** Composed documents as editable text, or a single empty one when the selection builds nothing. */
+/** Composed documents as text, or a single empty one when the selection builds nothing. */
 function textsOf(payload) {
   const entries = Object.entries(payload)
   if (entries.length === 0) return { [DEFAULT_DOCUMENT]: '' }
@@ -71,6 +53,10 @@ function textsOf(payload) {
 /**
  * Edits one profile. Mounted with a key, so opening another profile always
  * starts from a clean draft.
+ *
+ * Inputs come from the template form and nowhere else. The tree beside it is a read-only view of
+ * what the form has built, so a profile's inputs can always be traced back to a template and the
+ * fields that were typed into it.
  */
 export default function ProfileEditor({ profile: opened, canDelete, onSaved, onDeleted, onBack, onDirtyChange }) {
   const toasts = useToasts()
@@ -78,8 +64,6 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   // carries on editing what it just created rather than creating it again.
   const [saved, setSaved] = useState(opened)
   const [reloading, setReloading] = useState(false)
-  const fileInputRef = useRef(null)
-  const textareaRef = useRef(null)
 
   const [draft, setDraft] = useState(() => draftOf(opened))
   const [chosen, setChosen] = useState(() => Object.keys(toTexts(opened?.payload))[0])
@@ -92,17 +76,11 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   const [template, setTemplate] = useState(opened?.template ?? EMPTY_TEMPLATE)
   const [inferred, setInferred] = useState(false)
   const [catalog, setCatalog] = useState(null)
-  const [view, setView] = useState(!opened || opened.template ? 'form' : 'code')
+  const [catalogError, setCatalogError] = useState(null)
+  const [view, setView] = useState('form')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  // Something about to overwrite the document on screen — a sample, an imported file — waits
-  // here for a yes while that document still has content.
-  const [pendingReplace, setPendingReplace] = useState(null)
   const [comparing, setComparing] = useState(false)
-  const [dragging, setDragging] = useState(false)
-  // Drag events fire for every child the pointer crosses; counting them is what tells a real
-  // leave from a move between two children.
-  const dragDepth = useRef(0)
   // One line in the status bar saying what just happened. It replaces itself and then clears,
   // so routine confirmations never pile up the way a stack of pop-ups does.
   const [note, setNote] = useState(null)
@@ -116,11 +94,15 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
 
   useEffect(() => () => clearTimeout(noteTimer.current), [])
 
-  useEffect(() => {
-    let cancelled = false
+  /**
+   * The catalogue is the only way inputs are written, so failing to load it leaves nothing to do
+   * on this screen. It says so in the page and offers the retry, rather than spinning forever —
+   * `loadCatalog` drops its cached promise on failure, so trying again really does refetch.
+   */
+  const fetchCatalog = useCallback(() => {
+    setCatalogError(null)
     loadCatalog()
       .then((loaded) => {
-        if (cancelled) return
         setCatalog(loaded)
         if (opened && !opened.template) {
           const match = inferTemplate(loaded, opened.payload)
@@ -128,30 +110,26 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
             setTemplate(match)
             baselineTemplate.current = match
             setInferred(true)
-            setView('form')
           }
         }
       })
-      .catch((failure) => {
-        if (cancelled) return
-        // Without the catalogue there is no form to draw; the editor still works.
-        toasts.error(`The template catalogue could not be loaded: ${failure.message}`)
-        setView('code')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+      .catch((failure) => setCatalogError(failure.message))
+  }, [opened])
+
+  useEffect(() => {
+    fetchCatalog()
+  }, [fetchCatalog])
 
   const names = Object.keys(draft.documents)
-  // The tab on screen: the one picked, unless it has since been renamed or reverted away.
+  // The document on screen: the one picked, unless the form has since rebuilt the set without it.
   const active = chosen in draft.documents ? chosen : names[0]
   const text = draft.documents[active] ?? ''
-  const invalid = useMemo(() => invalidDocuments(draft.documents), [draft.documents])
+  // Documents the form has not built yet. Nothing can be edited by hand any more, so the only way
+  // one holds nothing usable is that no template has filled it in.
+  const unbuilt = useMemo(() => invalidDocuments(draft.documents), [draft.documents])
   const parsed = useMemo(() => parseJson(text), [text])
   const shape = useMemo(() => (parsed.ok ? describeShape(parsed.value) : null), [parsed])
   const dirty = snapshot(draft) !== baseline
-  // The tree needs something that parses; anything else falls back to the editor.
   const effectiveView = chooseView(view, parsed.ok)
   // An existing profile is governed by templates once it has a selection; its pickers are then
   // settled and hidden. While creating one, they stay on screen so the rest can be chosen.
@@ -169,10 +147,9 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   // jsonb does not preserve key order, so the comparison has to ignore it.
   const matchesTemplate = useMemo(() => {
     if (!catalog || !hasSelection(template)) return true
-    if (invalid.length > 0) return true
     const fromTemplate = JSON.stringify(compose(catalog, template.selection, template.values).payload)
     return sortJsonKeys(fromTemplate).text === sortJsonKeys(JSON.stringify(toPayload(draft.documents))).text
-  }, [catalog, template, invalid.length, draft.documents])
+  }, [catalog, template, draft.documents])
 
   const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
 
@@ -190,46 +167,17 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
     if (!(active in changes.documents)) setChosen(Object.keys(changes.documents)[0])
   }
 
-  /** Everything that edits JSON edits the document currently on screen. */
-  const patchText = (next) =>
-    setDraft((current) => ({ ...current, documents: { ...current.documents, [active]: next } }))
-
-  /** Overwrites the document on screen, asking first if there is something there to lose. */
-  const replaceText = (next, what, onDone) => {
-    const apply = () => {
-      patchText(next)
-      onDone?.()
-    }
-    if (text.trim() && next !== text) setPendingReplace({ what, apply })
-    else apply()
-  }
-
-  const transform = (transformer) => {
-    const result = transformer(text)
-    if (result.ok) {
-      patchText(result.text)
-    } else {
-      toasts.error(`Cannot reformat: ${result.error.message}`)
-    }
-  }
-
-  const showCode = () => {
-    setView('code')
-    requestAnimationFrame(() => textareaRef.current?.focus())
-  }
-
   const save = async () => {
-    if (invalid.length > 0) {
-      toasts.error(`Fix the JSON in “${invalid[0]}” first`)
-      setChosen(invalid[0])
-      showCode()
-      return
-    }
     if (!draft.name.trim()) {
       toasts.error('Give the profile a name before saving')
       return
     }
-    if (governed && missing.length > 0) {
+    if (unbuilt.length > 0) {
+      toasts.error('Pick a template to build the inputs before saving')
+      setView('form')
+      return
+    }
+    if (missing.length > 0) {
       toasts.error(`Fill in “${missing[0].label}” first — the template needs it`)
       setView('form')
       return
@@ -299,40 +247,6 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
     }
   }
 
-  const loadFile = async (file) => {
-    if (!file) return
-    let loaded
-    try {
-      loaded = await readJsonFile(file)
-    } catch {
-      toasts.error(`Could not read ${file.name}`)
-      return
-    }
-    const { name, text: contents } = loaded
-    const formatted = formatJson(contents)
-    replaceText(formatted.ok ? formatted.text : contents, `the contents of ${file.name}`, () => {
-      if (!draft.name.trim()) patch({ name })
-      if (formatted.ok) flash(`Loaded ${file.name}`)
-      else toasts.error(`${file.name} is not valid JSON — it was loaded so you can fix it`)
-      showCode()
-    })
-  }
-
-  const insertSample = () => replaceText(SAMPLE_PROFILE, 'a sample document', showCode)
-
-  const jumpToError = () => {
-    const position = parsed.error?.position
-    if (position == null) return
-    setView('code')
-    // The textarea may only appear on the next frame, if the tree or form was showing.
-    requestAnimationFrame(() => {
-      const input = textareaRef.current
-      if (!input) return
-      input.focus()
-      input.setSelectionRange(position, position + 1)
-    })
-  }
-
   // Anything that navigates away needs to know there is unsaved work to warn about.
   useEffect(() => {
     onDirtyChange?.(dirty)
@@ -345,7 +259,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   // instead of being torn down and rebuilt on every keystroke.
   const latest = useRef({})
   useEffect(() => {
-    latest.current = { save, format: () => transform(formatJson), back: onBack }
+    latest.current = { save, back: onBack }
   })
 
   useEffect(() => {
@@ -357,14 +271,9 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         latest.current.back?.()
         return
       }
-      if (!(event.metaKey || event.ctrlKey)) return
-      const key = event.key.toLowerCase()
-      if (key === 's') {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
         event.preventDefault()
         latest.current.save()
-      } else if (key === 'f' && event.shiftKey) {
-        event.preventDefault()
-        latest.current.format()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -383,120 +292,73 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
 
       <EditorToolbar
         view={effectiveView}
+        active={active}
         onViewChange={setView}
-        canFormat={parsed.ok}
-        onFormat={() => transform(formatJson)}
-        onMinify={() => transform(minifyJson)}
-        onSortKeys={() => transform(sortJsonKeys)}
+        canBrowse={parsed.ok}
         onCopy={copy}
-        onDownload={() => downloadJson(`${draft.name}-${active}`, text)}
-        onUpload={() => fileInputRef.current?.click()}
-        onSample={insertSample}
-        onCompare={saved && invalid.length === 0 ? () => setComparing(true) : null}
+        onDownload={parsed.ok ? () => downloadJson(`${draft.name}-${active}`, text) : null}
+        onCompare={saved && unbuilt.length === 0 ? () => setComparing(true) : null}
       />
 
-      {effectiveView !== 'form' && (
-        <DocumentTabs
-          names={names}
-          active={active}
-          invalid={invalid}
-          onSelect={setChosen}
-          onAdd={() => {
-            const name = nextDocumentName(draft.documents)
-            patch({ documents: sortByName({ ...draft.documents, [name]: '{}' }) })
-            setChosen(name)
-          }}
-          onRename={(from, to) => {
-            patch({ documents: renameDocument(draft.documents, from, to) })
-            setChosen(to)
-          }}
-          onRemove={(name) => {
-            // The tab strip only offers this while more than one system is present, so there is
-            // always something left to show afterwards.
-            const { [name]: removed, ...rest } = draft.documents
-            patch({ documents: rest })
-            setChosen(Object.keys(rest)[0])
-          }}
-        />
-      )}
+      {effectiveView === 'tree' && <DocumentTabs names={names} active={active} onSelect={setChosen} />}
 
-      <div
-        className="editor-body"
-        onDragEnter={(event) => {
-          event.preventDefault()
-          dragDepth.current += 1
-          setDragging(true)
-        }}
-        onDragOver={(event) => event.preventDefault()}
-        onDragLeave={() => {
-          dragDepth.current = Math.max(0, dragDepth.current - 1)
-          if (dragDepth.current === 0) setDragging(false)
-        }}
-        onDrop={(event) => {
-          event.preventDefault()
-          dragDepth.current = 0
-          setDragging(false)
-          loadFile(event.dataTransfer.files[0])
-        }}
-      >
-        {effectiveView === 'form' ? (
-          catalog ? (
-            <div className="template-form">
-              {governed && inferred ? (
-                <p className="notice notice-info">
-                  This profile was saved before its templates were recorded, so the fields below were
-                  matched to the inputs. Changing one rebuilds the inputs from the templates — which may
-                  add fields the templates define — and saving records the match.
-                </p>
-              ) : governed ? (
-                !matchesTemplate && (
-                  <p className="notice">
-                    These inputs have been edited by hand since they were composed. Changing a field here
-                    rebuilds them from the templates, and those edits will be lost.
-                  </p>
-                )
-              ) : (
-                !isNew && (
-                  <p className="notice">
-                    This profile was written by hand. Picking a template below rebuilds its inputs from
-                    that template, replacing what is there now — the Editor tab keeps them as they are.
-                  </p>
-                )
-              )}
-              <TemplateForm
-                catalog={catalog}
-                selection={template.selection}
-                values={template.values}
-                cards={cards}
-                invalidKeys={missing.map((field) => field.key)}
-                showPickers={isNew || !governed}
-                onSelect={(selection) => recompose(selection, template.values)}
-                onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
-              />
-            </div>
-          ) : (
-            <div className="table-message" aria-busy="true">
-              <span className="spinner" />
-            </div>
-          )
-        ) : effectiveView === 'tree' ? (
+      <div className="editor-body">
+        {effectiveView === 'tree' ? (
           <JsonTree value={parsed.value} />
+        ) : catalog ? (
+          <div className="template-form">
+            {governed && inferred ? (
+              <p className="notice notice-info">
+                This profile was saved before its templates were recorded, so the fields below were
+                matched to the inputs. Changing one rebuilds the inputs from the templates — which may
+                add fields the templates define — and saving records the match.
+              </p>
+            ) : governed ? (
+              !matchesTemplate && (
+                <p className="notice">
+                  These inputs were changed outside this form since they were composed. Changing a field
+                  here rebuilds them from the templates, and those changes will be lost.
+                </p>
+              )
+            ) : (
+              !isNew && (
+                <p className="notice">
+                  This profile was not built from a template, so there are no fields to show. Picking one
+                  below rebuilds its inputs from that template, replacing what is stored now — the Tree
+                  tab shows what that is.
+                </p>
+              )
+            )}
+            <TemplateForm
+              catalog={catalog}
+              selection={template.selection}
+              values={template.values}
+              cards={cards}
+              invalidKeys={missing.map((field) => field.key)}
+              showPickers={isNew || !governed}
+              onSelect={(selection) => recompose(selection, template.values)}
+              onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
+            />
+          </div>
+        ) : catalogError ? (
+          <div className="table-message">
+            <p className="muted">The templates could not be loaded, so there is nothing to fill in. {catalogError}</p>
+            <button className="btn btn-sm" onClick={fetchCatalog}>
+              Try again
+            </button>
+          </div>
         ) : (
-          <JsonEditor
-            value={text}
-            onChange={patchText}
-            errorLine={parsed.ok || parsed.empty ? null : parsed.error.line}
-            textareaRef={textareaRef}
-          />
+          <div className="table-message" aria-busy="true">
+            <span className="spinner" />
+          </div>
         )}
-        {dragging && <div className="drop-target">Drop a .json file to load it into “{active}”</div>}
       </div>
 
       <StatusBar
-        parsed={parsed}
+        built={parsed.ok}
         shape={shape}
         // The stored size is the minified payload, which is what the profile list shows too.
-        size={parsed.ok ? byteSize(JSON.stringify(parsed.value)) : byteSize(text)}
+        size={parsed.ok ? byteSize(JSON.stringify(parsed.value)) : null}
         dirty={dirty}
         saving={saving}
         isNew={isNew}
@@ -512,38 +374,12 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
           flash('Went back to the last saved version')
         }}
         onDelete={() => setConfirmingDelete(true)}
-        onJumpToError={jumpToError}
-      />
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json,.json"
-        hidden
-        onChange={(event) => {
-          loadFile(event.target.files[0])
-          event.target.value = ''
-        }}
       />
 
       {comparing && (
         <CompareDialog
           current={{ id: saved.id, name: draft.name, payload: toPayload(draft.documents) }}
           onClose={() => setComparing(false)}
-        />
-      )}
-
-      {pendingReplace && (
-        <ConfirmDialog
-          title={`Replace “${active}”?`}
-          message={`The document “${active}” will be replaced with ${pendingReplace.what}. Revert brings back the saved version, but not anything typed since.`}
-          confirmLabel="Replace"
-          onConfirm={() => {
-            const { apply } = pendingReplace
-            setPendingReplace(null)
-            apply()
-          }}
-          onCancel={() => setPendingReplace(null)}
         />
       )}
 
