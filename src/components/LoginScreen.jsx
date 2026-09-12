@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon } from './Icons.jsx'
+import { APP_NAME, BRAND_MARK } from '../config.js'
 
 const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname)
 
@@ -28,8 +29,8 @@ export default function LoginScreen({ onSignIn, expired, overlay = false }) {
   const card = (
     <form className="login-card" onSubmit={submit} aria-label="Sign in">
       <div className="brand login-brand">
-        <span className="brand-mark">{'{}'}</span>
-        <span>JSON Store</span>
+        <span className="brand-mark" aria-hidden="true">{BRAND_MARK}</span>
+        <span>{APP_NAME}</span>
       </div>
 
       <p className="login-lead">

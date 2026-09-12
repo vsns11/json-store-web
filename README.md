@@ -77,6 +77,9 @@ filled in — the templates chosen and the values typed — rather than only the
 - **Compare** shows what differs between the open profile and any other, path by path, rather than two
   documents side by side. "Same but the card is declined" is the question, and a list of paths answers
   it.
+- **Who changed it** is recorded per profile and shown under the updated time in the table and
+  beside the save state in the editor. The name comes from the token the API verified, so it cannot
+  be spoofed by a client. Profiles written before this existed show nothing rather than a guess.
 - **Click a tag** to narrow the table to it. That is an exact filter on the tag, not a text search, so
   `regression` in someone's notes does not muddy the list.
 - **Nothing is lost by accident**: leaving a profile with unsaved changes asks first, whether you use
@@ -162,14 +165,46 @@ The bundle is built once and configured at start, so the same image ships to eve
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `API_BASE_URL` | empty | Where the browser reaches the API. Empty means same origin |
+| `APP_NAME` | `JSON Store` | What this deployment calls itself: tab title, top bar, sign-in card |
+| `BRAND_MARK` | `{}` | One or two characters for the square mark beside the name |
+| `ACCENT_COLOR` | the app's indigo | Hex only, e.g. `#0b6bcb`. Anything else is ignored rather than half-applied |
 
-The container writes this into `/usr/share/nginx/html/config.js` on start; `index.html` loads it before
+The container writes these into `/usr/share/nginx/html/config.js` on start; `index.html` loads it before
 the bundle. For static hosting (S3+CloudFront, Pages, Netlify, Vercel) there is no container, so set
 `VITE_API_BASE_URL` at build time instead and upload `dist/`.
 
 nginx serves the bundle with gzip, a content security policy whose `connect-src` is widened to
 `API_BASE_URL`, one-year immutable caching on content-hashed assets, and `no-store` on `index.html` and
 `config.js` so a deploy reaches browsers immediately.
+
+### Making it look like your workspace
+
+The three branding variables are read before the first paint, so the page never flashes this app's
+name or colour on the way to yours. The accent sets `--accent`, derives the soft tint against
+whichever theme is showing, picks black or white for text on accent buttons by measuring the
+colour's luminance, and draws a matching tab icon. Nothing is rebuilt.
+
+```bash
+docker run -e API_BASE_URL=https://json.corp.example.com \
+           -e APP_NAME='Acme Test Data' -e BRAND_MARK=A -e ACCENT_COLOR='#0b6bcb' …
+```
+
+```bash
+helm upgrade --install json-store-web ./chart \
+  --set config.APP_NAME='Acme Test Data' \
+  --set config.BRAND_MARK=A \
+  --set config.ACCENT_COLOR='#0b6bcb'
+```
+
+A value that is not a hex colour is ignored and the app keeps its own accent, because a custom
+property the stylesheet cannot parse would strip the colour from every accented control at once.
+
+### Contrast
+
+Every colour that carries text clears WCAG AA, 4.5:1, against each surface it is actually drawn on,
+in both themes. That is 48 pairs, measured rather than judged; the worst is 4.58. Four of them were
+between 3.0 and 4.4 before the pass — faint text, the syntax punctuation, and the success and danger
+pills. If you change the palette in `tokens.css`, re-measure rather than eyeball it.
 
 ## How the app fits together
 

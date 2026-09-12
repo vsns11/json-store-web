@@ -364,6 +364,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         isNew={isNew}
         canDelete={canDelete}
         savedAt={saved?.updatedAt}
+        savedBy={saved?.updatedBy}
         note={note}
         reloading={reloading}
         onReload={saved ? reload : null}

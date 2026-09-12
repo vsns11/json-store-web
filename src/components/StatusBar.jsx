@@ -7,7 +7,7 @@ import { shortcut } from '../lib/platform.js'
  * Where the draft stands against the stored profile. This is the only place the app reports a
  * save: it stays on screen instead of flashing past, so there is nothing to catch or dismiss.
  */
-function SaveState({ dirty, savedAt }) {
+function SaveState({ dirty, savedAt, savedBy }) {
   // "Saved just now" would stay "just now" forever without a nudge, so re-render it now and then.
   const [, setTick] = useState(0)
   const settled = !dirty && Boolean(savedAt)
@@ -31,6 +31,7 @@ function SaveState({ dirty, savedAt }) {
   return (
     <span className="save-state is-saved">
       <Icon.Check /> Saved {formatRelativeTime(savedAt)}
+      {savedBy && <span className="muted"> by {savedBy}</span>}
     </span>
   )
 }
@@ -44,6 +45,7 @@ export default function StatusBar({
   isNew,
   canDelete,
   savedAt,
+  savedBy,
   note,
   reloading,
   onSave,
@@ -73,7 +75,7 @@ export default function StatusBar({
         {/* What just happened, if anything: one slot that replaces itself and then clears. */}
         {note && <span className="status-note">{note}</span>}
 
-        <SaveState dirty={dirty} savedAt={savedAt} />
+        <SaveState dirty={dirty} savedAt={savedAt} savedBy={savedBy} />
 
         {onReload && (
           <button

@@ -205,7 +205,12 @@ export default function ProfileTable({
                     </span>
                   </td>
                   <td className="cell-time">{formatRelativeTime(item.createdAt)}</td>
-                  <td className="cell-time">{formatRelativeTime(item.updatedAt)}</td>
+                  <td className="cell-time">
+                    {formatRelativeTime(item.updatedAt)}
+                    {/* Profiles stored before the API recorded a name show nothing here rather
+                        than a guess at who it might have been. */}
+                    {item.updatedBy && <span className="cell-by">by {item.updatedBy}</span>}
+                  </td>
                   <td className="is-right">
                     <span className="row-actions" onClick={(event) => event.stopPropagation()}>
                       <button className="btn btn-sm" onClick={() => onOpen(item.id)}>

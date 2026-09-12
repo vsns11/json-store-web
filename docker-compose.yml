@@ -9,6 +9,10 @@ services:
     environment:
       # Read by the browser, so it must be the address the API answers on from outside.
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+      # Branding, applied before the first paint. Empty keeps the app's own.
+      APP_NAME: ${APP_NAME:-}
+      BRAND_MARK: ${BRAND_MARK:-}
+      ACCENT_COLOR: ${ACCENT_COLOR:-}
     ports:
       - '${WEB_PORT:-3000}:8080'
     restart: unless-stopped

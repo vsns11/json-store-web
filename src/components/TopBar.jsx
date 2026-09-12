@@ -2,6 +2,7 @@ import { Icon } from './Icons.jsx'
 import { formatBytes, formatRelativeTime } from '../lib/json.js'
 import { initialsFor, tintClass } from '../lib/palette.js'
 import { shortcut } from '../lib/platform.js'
+import { APP_NAME, BRAND_MARK } from '../config.js'
 
 /** The bar across the top: menu toggle, brand, who is signed in, store totals and search. */
 export default function TopBar({ stats, user, search, searchRef, onSearch, onSignOut, onToggleMenu, menuExpanded }) {
@@ -17,8 +18,8 @@ export default function TopBar({ stats, user, search, searchRef, onSearch, onSig
       </button>
 
       <div className="brand">
-        <span className="brand-mark">{'{}'}</span>
-        <span>JSON Store</span>
+        <span className="brand-mark" aria-hidden="true">{BRAND_MARK}</span>
+        <span>{APP_NAME}</span>
       </div>
 
       <div className="topbar-stats">

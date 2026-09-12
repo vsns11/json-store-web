@@ -176,6 +176,14 @@
   white-space: nowrap;
 }
 
+/* Who last touched it, under the time, in the same rank as a row's description. */
+.cell-by {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
 /* Tags take their colour from their own name, so the same tag reads the same everywhere. */
 .tag {
   padding: 1px 8px;

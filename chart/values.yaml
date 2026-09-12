@@ -18,6 +18,13 @@ config:
   # sends /api to the API service on this same host — then there is no CORS at all.
   API_BASE_URL: ""
 
+  # What this deployment calls itself, applied before the first paint. Leave these empty to
+  # keep the app's own name, mark and colour. Changing any of them rolls the pods, because
+  # the Deployment carries a checksum of this ConfigMap.
+  APP_NAME: ""          # e.g. "Acme Test Data"
+  BRAND_MARK: ""        # one or two characters for the square mark, e.g. "A"
+  ACCENT_COLOR: ""      # hex only, e.g. "#0b6bcb"; anything else is ignored
+
 resources:
   requests:
     cpu: 50m

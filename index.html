@@ -6,13 +6,14 @@
     <meta name="color-scheme" content="light dark" />
     <title>JSON Store</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>" />
-    <!-- Picks the theme before anything is painted, so there is no flash of the wrong one. -->
+    <!-- Runtime configuration, replaced per environment without rebuilding the bundle. It comes
+         first because the theme below reads the deployment's own colour and name out of it. -->
+    <script src="/config.js"></script>
+    <!-- Picks the theme, the accent and the tab icon before anything is painted. -->
     <script src="/theme.js"></script>
   </head>
   <body>
     <div id="root"></div>
-    <!-- Runtime configuration, replaced per environment without rebuilding the bundle. -->
-    <script src="/config.js"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

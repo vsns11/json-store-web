@@ -4,6 +4,31 @@
    inputs, the spinner, the loading skeleton.
    ========================================================================== */
 
+/* Off-screen until focused, then a normal-looking button in the top-left corner. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent-contrast);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+/* Focusing the region the skip link points at must not draw a box round the whole page. */
+.content:focus {
+  outline: none;
+}
+
 /* Keyboard focus is shown on everything; a mouse click shows nothing extra. */
 :focus-visible {
   outline: 2px solid var(--accent);

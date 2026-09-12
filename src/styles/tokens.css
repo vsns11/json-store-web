@@ -13,28 +13,32 @@
   --border-strong: #cfd6e0;
   --text: #131923;
   --text-muted: #667085;
-  --text-faint: #8b95a6;
+  --text-faint: #69707d;
   --accent: #4f46e5;
   --accent-soft: #eef0ff;
   --accent-contrast: #ffffff;
-  --success: #0f9464;
+  --success: #0d7d55;
   --success-soft: #e6f6ef;
-  --danger: #d92d20;
+  --danger: #ce2b1e;
   --danger-soft: #fdecea;
   --warn: #b54708;
-  /* Syntax colours, shared by the editor and the tree. */
+  /* Every colour below carries text, so every one of them clears 4.5:1 against the surface it
+     is drawn on, in BOTH themes. Measured 2026-09-12 with a WCAG contrast pass over each pair
+     the components actually use; the readings are in the README. If you change one, re-run that
+     pass rather than eyeballing it — four of these were between 3.0 and 4.4 before it. */
+  /* Syntax colours, shared by the tree and the table's previews. */
   --code-key: #4f46e5;
-  --code-string: #0f9464;
+  --code-string: #0d7d55;
   --code-number: #c2410c;
   --code-boolean: #7c3aed;
-  --code-punct: #8b95a6;
+  --code-punct: #69707d;
   /* Tints for tags and monograms. Anything can be given a stable colour by name;
      add a pair here and raise PALETTE_SIZE in lib/palette.js to widen the set. */
   --tint-0-bg: #eceefe; --tint-0-fg: #4338ca;
   --tint-1-bg: #e2f5f1; --tint-1-fg: #0f766e;
-  --tint-2-bg: #fdf0dd; --tint-2-fg: #b45309;
+  --tint-2-bg: #fdf0dd; --tint-2-fg: #b15209;
   --tint-3-bg: #fde9ed; --tint-3-fg: #be123c;
-  --tint-4-bg: #e6f5ea; --tint-4-fg: #15803d;
+  --tint-4-bg: #e6f5ea; --tint-4-fg: #157d3c;
   --tint-5-bg: #e2f1fc; --tint-5-fg: #0369a1;
   --tint-6-bg: #f2eafd; --tint-6-fg: #7c3aed;
   --tint-7-bg: #eaeef4; --tint-7-fg: #475569;
@@ -58,7 +62,7 @@
   --border-strong: #2f3745;
   --text: #e6eaf2;
   --text-muted: #98a2b3;
-  --text-faint: #6b7686;
+  --text-faint: #778190;
   --accent: #8b87ff;
   --accent-soft: #1d1c33;
   --accent-contrast: #0b0e14;
@@ -71,7 +75,7 @@
   --code-string: #3fd39a;
   --code-number: #f0a35e;
   --code-boolean: #b7a4ff;
-  --code-punct: #6b7686;
+  --code-punct: #778190;
   --tint-0-bg: #1d1b3d; --tint-0-fg: #a5a1ff;
   --tint-1-bg: #0f2b28; --tint-1-fg: #5eead4;
   --tint-2-bg: #2c2011; --tint-2-fg: #fbbf24;

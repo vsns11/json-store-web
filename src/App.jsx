@@ -11,6 +11,7 @@ import Toasts from './components/Toasts.jsx'
 import { useAuth } from './hooks/useAuth.jsx'
 import { useProfiles } from './hooks/useProfiles.js'
 import { useToasts } from './hooks/useToasts.jsx'
+import { APP_NAME } from './config.js'
 
 /** Deleting is reserved for the admin group in the directory, the same rule the API enforces. */
 const mayDelete = (user) => Boolean(user?.roles?.includes('ADMINS'))
@@ -61,12 +62,12 @@ export default function App() {
   useEffect(() => {
     if (view === 'editor') {
       const name = selected?.name ?? 'New profile'
-      document.title = `${editorDirty ? '• ' : ''}${name} · JSON Store`
+      document.title = `${editorDirty ? '• ' : ''}${name} · ${APP_NAME}`
     } else {
-      document.title = 'JSON Store'
+      document.title = APP_NAME
     }
     return () => {
-      document.title = 'JSON Store'
+      document.title = APP_NAME
     }
   }, [view, selected, editorDirty])
 
@@ -206,6 +207,12 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* The first thing a keyboard reaches, so the rail and the search box can be stepped over
+          rather than tabbed through on every view change. Invisible until it has focus. */}
+      <a className="skip-link" href="#content">
+        Skip to content
+      </a>
+
       <TopBar
         stats={stats}
         user={user}
@@ -229,7 +236,7 @@ export default function App() {
           onShowShortcuts={() => setShowShortcuts(true)}
         />
 
-        <main className="content">
+        <main className="content" id="content" tabIndex={-1}>
           {view === 'table' ? (
             <ProfileTable
               query={query}
