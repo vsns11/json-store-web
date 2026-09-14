@@ -51,6 +51,13 @@ export function AuthProvider({ children }) {
       .me()
       .then((me) => {
         if (cancelled) return
+        // A token issued before roles were mapped from directory groups carries none the API now
+        // accepts. Every request with it would be refused, so it is dropped and sign-in asked for.
+        if (!me.roles?.includes('VIEWER')) {
+          clearSession()
+          setStatus('anonymous')
+          return
+        }
         setUser(me)
         setStatus('signed-in')
       })

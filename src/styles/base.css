@@ -464,6 +464,14 @@
   font-size: 11.5px;
 }
 
+/* Groups the form's controls so a viewer's copy can be disabled in one place. It draws nothing. */
+.form-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 /* A field a save was refused for: the border says which, the message beneath it says why. */
 .input.is-invalid {
   border-color: var(--danger);

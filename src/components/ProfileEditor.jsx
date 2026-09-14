@@ -19,6 +19,9 @@ import StatusBar from './StatusBar.jsx'
 
 const snapshot = (draft) => JSON.stringify(draft)
 
+/** A viewer's copy never changes, so there is never unsaved work to warn about. */
+const ignoreChange = () => {}
+
 /** A new profile starts with no templates chosen; picking one fills in the inputs. */
 const EMPTY_TEMPLATE = { selection: {}, values: {} }
 
@@ -66,7 +69,15 @@ function textsOf(payload) {
  * what the form has built, so a profile's inputs can always be traced back to a template and the
  * fields that were typed into it.
  */
-export default function ProfileEditor({ profile: opened, canDelete, onSaved, onDeleted, onBack, onDirtyChange }) {
+export default function ProfileEditor({
+  profile: opened,
+  canEdit = true,
+  canDelete,
+  onSaved,
+  onDeleted,
+  onBack,
+  onDirtyChange,
+}) {
   const toasts = useToasts()
   // The profile as the server last stored it. Saving a new profile fills this in, so the editor
   // carries on editing what it just created rather than creating it again.
@@ -210,6 +221,8 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
 
   /** Saves the version that was loaded; with `overwrite`, replaces whatever is stored instead. */
   const save = async ({ overwrite = false } = {}) => {
+    // A viewer is offered no Save button, but the keyboard shortcut still arrives here.
+    if (!canEdit) return
     if (!draft.name.trim()) {
       toasts.error('Give the profile a name before saving')
       return
@@ -347,7 +360,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         name={draft.name}
         description={draft.description}
         tags={draft.tags}
-        onChange={patch}
+        onChange={canEdit ? patch : ignoreChange}
         onBack={onBack}
       />
 
@@ -368,6 +381,12 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
           <JsonTree value={parsed.value} />
         ) : catalog ? (
           <div className="template-form">
+            {!canEdit && (
+              <p className="notice notice-info">
+                You can look at this profile, but changing it needs editor access. Ask your administrator if you
+                should have it.
+              </p>
+            )}
             {governed && inferred ? (
               <p className="notice notice-info">
                 This profile was saved before its templates were recorded, so the fields below were
@@ -390,19 +409,22 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
                 </p>
               )
             )}
-            <TemplateForm
-              catalog={catalog}
-              selection={template.selection}
-              values={template.values}
-              cards={cards}
-              errors={errors}
-              summary={shown}
-              summarySignal={summarySignal}
-              // A settled profile hides its pickers, unless a required group is the thing to fix.
-              showPickers={isNew || !governed || problems.some((problem) => problem.key.startsWith('group:'))}
-              onSelect={(selection) => recompose(selection, template.values)}
-              onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
-            />
+            {/* disabled on a fieldset disables every control inside it, however deeply nested. */}
+            <fieldset className="form-fieldset" disabled={!canEdit}>
+              <TemplateForm
+                catalog={catalog}
+                selection={template.selection}
+                values={template.values}
+                cards={cards}
+                errors={errors}
+                summary={shown}
+                summarySignal={summarySignal}
+                // A settled profile hides its pickers, unless a required group is the thing to fix.
+                showPickers={isNew || !governed || problems.some((problem) => problem.key.startsWith('group:'))}
+                onSelect={(selection) => recompose(selection, template.values)}
+                onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
+              />
+            </fieldset>
           </div>
         ) : catalogError ? (
           <div className="table-message">
@@ -432,7 +454,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         note={note}
         reloading={reloading}
         onReload={saved ? reload : null}
-        onSave={save}
+        onSave={canEdit ? save : null}
         onRevert={() => {
           setDraft(JSON.parse(baseline))
           setTemplate(baselineTemplate.current)

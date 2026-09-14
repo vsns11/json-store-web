@@ -75,9 +75,11 @@ export default function ProfileTable({
         )}
         {loading && <span className="spinner" role="status" aria-label="Loading" />}
         <span className="table-head-spacer" />
-        <button className="btn btn-primary btn-sm" onClick={onNew}>
-          <Icon.Plus /> New profile
-        </button>
+        {onNew && (
+          <button className="btn btn-primary btn-sm" onClick={onNew}>
+            <Icon.Plus /> New profile
+          </button>
+        )}
       </header>
 
       <div className="table-scroll">
@@ -134,9 +136,11 @@ export default function ProfileTable({
                       ) : (
                         <>
                           <p className="muted">No profiles yet. A profile is a named set of inputs a test scenario runs with.</p>
-                          <button className="btn btn-primary btn-sm" onClick={onNew}>
-                            <Icon.Plus /> Create the first one
-                          </button>
+                          {onNew && (
+                            <button className="btn btn-primary btn-sm" onClick={onNew}>
+                              <Icon.Plus /> Create the first one
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -214,11 +218,13 @@ export default function ProfileTable({
                   <td className="is-right">
                     <span className="row-actions" onClick={(event) => event.stopPropagation()}>
                       <button className="btn btn-sm" onClick={() => onOpen(item.id)}>
-                        Edit
+                        {onDuplicate ? 'Edit' : 'View'}
                       </button>
-                      <button className="btn btn-sm" title="Duplicate" aria-label={`Duplicate ${item.name}`} onClick={() => onDuplicate(item)}>
-                        <Icon.Copy />
-                      </button>
+                      {onDuplicate && (
+                        <button className="btn btn-sm" title="Duplicate" aria-label={`Duplicate ${item.name}`} onClick={() => onDuplicate(item)}>
+                          <Icon.Copy />
+                        </button>
+                      )}
                       {/* Only offered to accounts the API would actually let delete. */}
                       {onDelete && (
                         <button className="btn btn-sm btn-danger" title="Delete" aria-label={`Delete ${item.name}`} onClick={() => onDelete(item)}>

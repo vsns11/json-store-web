@@ -28,7 +28,8 @@ export default function Sidebar({
       onClick: onToggleTheme,
     },
     { key: 'shortcuts', label: 'Keyboard shortcuts', icon: <Icon.Keyboard />, onClick: onShowShortcuts },
-  ]
+    // An entry with nothing to do for this account, such as New profile for a viewer, is left out.
+  ].filter((item) => item.onClick)
 
   return (
     <aside className={`sidebar${expanded ? ' is-expanded' : ''}`}>

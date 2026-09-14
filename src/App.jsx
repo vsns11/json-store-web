@@ -13,8 +13,11 @@ import { useProfiles } from './hooks/useProfiles.js'
 import { useToasts } from './hooks/useToasts.jsx'
 import { APP_NAME } from './config.js'
 
-/** Deleting is reserved for the admin group in the directory, the same rule the API enforces. */
-const mayDelete = (user) => Boolean(user?.roles?.includes('ADMINS'))
+// What the signed-in account may do, from the roles the API gave it at sign-in. The API enforces the
+// same rules; these only keep the screen from offering what would be refused. Roles nest, so an admin
+// also carries EDITOR and VIEWER.
+const mayEdit = (user) => Boolean(user?.roles?.includes('EDITOR'))
+const mayDelete = (user) => Boolean(user?.roles?.includes('ADMIN'))
 
 /**
  * Which sidebar entry is highlighted. Editing an existing profile is reached from the table rather
@@ -231,7 +234,7 @@ export default function App() {
           activeItem={railSelection(view, selected)}
           theme={theme}
           onShowProfiles={showProfiles}
-          onNewProfile={startNewProfile}
+          onNewProfile={mayEdit(user) ? startNewProfile : null}
           onRefresh={refresh}
           onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           onShowShortcuts={() => setShowShortcuts(true)}
@@ -246,15 +249,16 @@ export default function App() {
               loading={loading}
               error={error}
               onRetry={refresh}
-              onNew={startNewProfile}
+              onNew={mayEdit(user) ? startNewProfile : null}
               onOpen={openProfile}
-              onDuplicate={duplicateProfile}
+              onDuplicate={mayEdit(user) ? duplicateProfile : null}
               onDelete={mayDelete(user) ? setPendingDelete : null}
             />
           ) : (
             <ProfileEditor
               key={editorKey}
               profile={selected}
+              canEdit={mayEdit(user)}
               canDelete={mayDelete(user)}
               onDirtyChange={setEditorDirty}
               onBack={showProfiles}

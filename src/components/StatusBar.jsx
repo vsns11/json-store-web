@@ -94,19 +94,24 @@ export default function StatusBar({
           </button>
         )}
 
-        <button className="btn btn-sm" onClick={onRevert} disabled={!dirty}>
-          <Icon.Revert /> Revert
-        </button>
+        {/* A viewer has nothing to save, so is offered neither. */}
+        {onSave && (
+          <>
+            <button className="btn btn-sm" onClick={onRevert} disabled={!dirty}>
+              <Icon.Revert /> Revert
+            </button>
 
-        <button
-          className="btn btn-sm btn-primary"
-          onClick={onSave}
-          disabled={saving || !built || !dirty}
-          title={`Save (${shortcut('S')})`}
-        >
-          {saving ? <span className="spinner" /> : <Icon.Save />}
-          {isNew ? 'Save profile' : 'Save changes'}
-        </button>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={onSave}
+              disabled={saving || !built || !dirty}
+              title={`Save (${shortcut('S')})`}
+            >
+              {saving ? <span className="spinner" /> : <Icon.Save />}
+              {isNew ? 'Save profile' : 'Save changes'}
+            </button>
+          </>
+        )}
       </div>
     </footer>
   )
