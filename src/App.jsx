@@ -145,6 +145,18 @@ export default function App() {
       refresh()
     })
 
+  /**
+   * Signing out closes whatever was open. Otherwise the next person to sign in on this screen would land
+   * in the last one's editor, looking at the profile as it was when that person opened it.
+   */
+  const signOutAndClose = () => {
+    setEditorDirty(false)
+    setSelected(null)
+    setCopySource(null)
+    setView('table')
+    signOut()
+  }
+
   /** Typing a search always lands on the table; with unsaved work that is asked about first. */
   const search = (value) => {
     if (view === 'editor') {
@@ -219,7 +231,7 @@ export default function App() {
       <TopBar
         stats={stats}
         user={user}
-        onSignOut={signOut}
+        onSignOut={signOutAndClose}
         search={query.search}
         searchRef={searchRef}
         menuExpanded={sidebarExpanded}
