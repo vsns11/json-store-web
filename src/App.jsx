@@ -162,7 +162,7 @@ export default function App() {
         name: `${original.name} (copy)`,
         description: original.description,
         tags: original.tags,
-        payload: original.payload,
+        // The server rebuilds the copy's inputs from the same templates.
         template: original.template ?? null,
       })
       toasts.success(`Copied to “${copy.name}”`)

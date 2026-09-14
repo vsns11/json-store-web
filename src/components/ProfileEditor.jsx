@@ -185,21 +185,29 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
 
     setSaving(true)
     try {
+      // The server builds the inputs from the template itself; the tree here is only a preview. A
+      // profile with no templates sends none, which keeps its stored inputs and changes the details.
       const body = {
         name: draft.name.trim(),
         description: draft.description.trim() || null,
         tags: draft.tags,
-        payload: toPayload(draft.documents),
         template: governed ? template : null,
       }
       const result = isNew ? await api.create(body) : await api.update(saved.id, body)
+      // What was stored is what the server built, so the editor adopts it rather than its own preview.
+      const stored = draftOf(result)
       setSaved(result)
-      setBaseline(snapshot(draft))
+      setDraft(stored)
+      setBaseline(snapshot(stored))
+      setTemplate(result.template ?? EMPTY_TEMPLATE)
+      if (!(active in stored.documents)) setChosen(Object.keys(stored.documents)[0])
       baselineTemplate.current = result.template ?? EMPTY_TEMPLATE
       setInferred(false)
       flash(isNew ? 'Saved' : 'Saved your changes')
       onSaved(result)
     } catch (error) {
+      // Refused inputs name each field; the first one says what to fix, and the form is where to fix it.
+      if (error.status === 422) setView('form')
       toasts.error(error.message)
     } finally {
       setSaving(false)
