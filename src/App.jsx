@@ -44,6 +44,8 @@ export default function App() {
   const [view, setView] = useState('table') // 'table' while browsing, 'editor' while editing one
   const [selected, setSelected] = useState(null) // the open profile, or null for a new one
   const [editorKey, setEditorKey] = useState('new')
+  // The profile a new, unsaved copy starts from, while one is open; otherwise null.
+  const [copySource, setCopySource] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [showShortcuts, setShowShortcuts] = useState(false)
   // Set while the editor holds unsaved work, so leaving can ask first.
@@ -121,6 +123,7 @@ export default function App() {
     try {
       const profile = await api.get(id)
       setSelected(profile)
+      setCopySource(null)
       setEditorKey(profile.id)
       setView('editor')
     } catch (failure) {
@@ -131,6 +134,7 @@ export default function App() {
   const startNewProfile = () =>
     leaveEditor(() => {
       setSelected(null)
+      setCopySource(null)
       setEditorKey(`new-${Date.now()}`)
       setView('editor')
     })
@@ -155,23 +159,18 @@ export default function App() {
     }
   }
 
-  /** Copies a profile, templates and all, and opens the copy ready to be adjusted. */
+  /**
+   * Opens a copy of a profile, templates and all, as a new profile that is not saved until someone
+   * saves it. Duplicating used to save the copy at once, so a stray click left a twin in the store.
+   */
   const duplicateProfile = (summary) => leaveEditor(() => copyProfile(summary))
 
   const copyProfile = async (summary) => {
     try {
       const original = await api.get(summary.id)
-      const copy = await api.create({
-        name: `${original.name} (copy)`,
-        description: original.description,
-        tags: original.tags,
-        // The server rebuilds the copy's inputs from the same templates.
-        template: original.template ?? null,
-      })
-      toasts.success(`Copied to “${copy.name}”`)
-      refresh()
-      setSelected(copy)
-      setEditorKey(copy.id)
+      setSelected(null)
+      setCopySource(original)
+      setEditorKey(`copy-${original.id}-${Date.now()}`)
       setView('editor')
     } catch (failure) {
       toasts.error(failure.message)
@@ -258,6 +257,7 @@ export default function App() {
             <ProfileEditor
               key={editorKey}
               profile={selected}
+              copyOf={copySource}
               canEdit={mayEdit(user)}
               canDelete={mayDelete(user)}
               onDirtyChange={setEditorDirty}
@@ -266,6 +266,7 @@ export default function App() {
                 // Stay on the profile that was just saved; only the list behind it needs refreshing.
                 setEditorDirty(false)
                 setSelected(profile)
+                setCopySource(null)
                 refresh()
               }}
               onDeleted={() => {

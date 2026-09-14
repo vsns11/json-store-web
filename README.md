@@ -72,8 +72,10 @@ filled in — the templates chosen and the values typed — rather than only the
 
 **Working with a store full of near-identical profiles**
 
-- **Duplicate** copies a profile — inputs, tags and the templates behind it — and opens the copy, which
-  is how most scenarios start: the same thing with one field changed.
+- **Duplicate** opens a copy of a profile — tags and the templates behind it — as a new profile that is
+  not saved until you save it. Fields that identify one particular thing (those the catalogue gives an
+  `example` rather than a `default`, such as names and serial numbers) start empty, so a copy cannot be
+  saved as its original's twin.
 - **Compare** shows what differs between the open profile and any other, path by path, rather than two
   documents side by side. "Same but the card is declined" is the question, and a list of paths answers
   it.

@@ -71,6 +71,7 @@ function textsOf(payload) {
  */
 export default function ProfileEditor({
   profile: opened,
+  copyOf = null,
   canEdit = true,
   canDelete,
   onSaved,
@@ -84,15 +85,18 @@ export default function ProfileEditor({
   const [saved, setSaved] = useState(opened)
   const [reloading, setReloading] = useState(false)
 
-  const [draft, setDraft] = useState(() => draftOf(opened))
-  const [chosen, setChosen] = useState(() => Object.keys(toTexts(opened?.payload))[0])
-  const [baseline, setBaseline] = useState(() => snapshot(draft))
+  const [draft, setDraft] = useState(() =>
+    copyOf ? { ...draftOf(copyOf), name: `${copyOf.name} (copy)` } : draftOf(opened),
+  )
+  const [chosen, setChosen] = useState(() => Object.keys(toTexts((copyOf ?? opened)?.payload))[0])
+  // A copy has never been saved, so it opens as unsaved work: leaving asks first.
+  const [baseline, setBaseline] = useState(() => snapshot(copyOf ? draftOf(null) : draft))
   // The templates the baseline was composed from, so reverting puts the form back too.
   const baselineTemplate = useRef(opened?.template ?? EMPTY_TEMPLATE)
   // A profile composed from templates remembers its selection, and can be edited as that form again.
   // Older ones do not, so their selection is worked out from the inputs instead.
   const isNew = !saved
-  const [template, setTemplate] = useState(opened?.template ?? EMPTY_TEMPLATE)
+  const [template, setTemplate] = useState((copyOf ?? opened)?.template ?? EMPTY_TEMPLATE)
   const [inferred, setInferred] = useState(false)
   const [catalog, setCatalog] = useState(null)
   const [catalogError, setCatalogError] = useState(null)
@@ -125,6 +129,25 @@ export default function ProfileEditor({
     loadCatalog()
       .then((loaded) => {
         setCatalog(loaded)
+        if (copyOf) {
+          const source = copyOf.template ?? inferTemplate(loaded, copyOf.payload)
+          if (source) {
+            // A copy keeps what the original was built from, but not what made it that one thing:
+            // fields the catalogue gives an example rather than a default — names, serial numbers,
+            // ids — start empty, so the copy cannot be saved as the original's twin.
+            const identities = new Set(
+              fieldsFor(loaded, source.selection)
+                .filter((field) => field.example !== undefined)
+                .map((field) => field.key),
+            )
+            const kept = Object.fromEntries(
+              Object.entries(source.values ?? {}).filter(([key]) => !identities.has(key)),
+            )
+            const result = compose(loaded, source.selection, kept)
+            setTemplate({ selection: source.selection, values: result.values })
+            setDraft((current) => ({ ...current, documents: textsOf(result.payload) }))
+          }
+        }
         if (opened && !opened.template) {
           const match = inferTemplate(loaded, opened.payload)
           if (match) {
@@ -135,7 +158,7 @@ export default function ProfileEditor({
         }
       })
       .catch((failure) => setCatalogError(failure.message))
-  }, [opened])
+  }, [opened, copyOf])
 
   useEffect(() => {
     fetchCatalog()
@@ -381,6 +404,12 @@ export default function ProfileEditor({
           <JsonTree value={parsed.value} />
         ) : catalog ? (
           <div className="template-form">
+            {copyOf && isNew && (
+              <p className="notice notice-info">
+                A copy of “{copyOf.name}”, not saved yet. Fields that identify one particular thing start empty,
+                ready for this one’s own.
+              </p>
+            )}
             {!canEdit && (
               <p className="notice notice-info">
                 You can look at this profile, but changing it needs editor access. Ask your administrator if you
