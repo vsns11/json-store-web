@@ -19,5 +19,6 @@ jobs:
       - run: npm test
       - run: npm run build
       - uses: azure/setup-helm@v4
-      - run: helm lint chart
+      # The chart refuses to render without an image tag, so lint supplies a stand-in.
+      - run: helm lint chart --set image.tag=ci
       - run: docker build -t json-store-web:${{ github.sha }} .
