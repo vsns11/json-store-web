@@ -76,7 +76,8 @@ export default function LoginScreen({ onSignIn, expired, overlay = false }) {
 
       {isLocal && (
         <p className="login-hint">
-          Local directory: <code>alice / secret</code> (admins, may delete) · <code>bob / secret</code> (developers)
+          Local directory, password <code>secret</code>: <code>alice</code> admin · <code>bob</code> editor ·{' '}
+          <code>dave</code> viewer · <code>carol</code> has no access
         </p>
       )}
     </form>
