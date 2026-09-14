@@ -76,6 +76,12 @@ filled in — the templates chosen and the values typed — rather than only the
   not saved until you save it. Fields that identify one particular thing (those the catalogue gives an
   `example` rather than a `default`, such as names and serial numbers) start empty, so a copy cannot be
   saved as its original's twin.
+- **Start from saved profiles** builds a new profile out of one or more that are already saved — from
+  the button above the list, or on a new profile. Each brings the templates it was saved with and the
+  values typed into them, so a base ONU and a Toronto business customer, saved once each, combine into a
+  Toronto business ONU. Where two chose differently for the same group or field, the one picked later
+  is used, and the dialog and the new profile both say where that happened. Identifiers start empty, as
+  on a duplicate, and nothing is saved until you save it.
 - **Compare** shows what differs between the open profile and any other, path by path, rather than two
   documents side by side. "Same but the card is declined" is the question, and a list of paths answers
   it.
@@ -98,7 +104,6 @@ filled in — the templates chosen and the values typed — rather than only the
 - Sign-in against the directory the API is pointed at; the session token lives in the tab only
 - A session is renewed in the background before its token runs out, for as long as the API allows;
   if it does run out mid-edit, the sign-in card is laid over the page and nothing typed is lost
-- `⌘/Ctrl+S` save · `⌘/Ctrl+K` search · `Esc` back to the list
 
 ## Getting started
 
@@ -145,8 +150,8 @@ Open <http://localhost:3000>. Stop it with `docker compose down`.
 ### Signing in
 
 The API authenticates against LDAP and answers with a bearer token, which this app keeps in
-`sessionStorage` for the tab. Against the API's own local directory, sign in as `alice / secret` (may
-delete profiles) or `bob / secret` (may not). A rejected or expired token returns you to the sign-in
+`sessionStorage` for the tab. Against the API's own local directory the password is `secret` for
+everyone: `alice` is an admin, `bob` an editor, `dave` a viewer, and `carol` is refused. A rejected or expired token returns you to the sign-in
 screen.
 
 ### If something does not work
@@ -285,7 +290,7 @@ Components map one-to-one onto what you see, and each takes plain props with no 
 | `Sidebar` | Navigation |
 | `TopBar` | Brand, the signed-in user, store totals and search |
 | `EditorToolbar` · `StatusBar` · `TagEditor` | The controls around the form and the tree |
-| `LoginScreen` · `ConfirmDialog` · `ShortcutsDialog` · `Toasts` · `ErrorBoundary` | Sign-in and the overlays |
+| `LoginScreen` · `ConfirmDialog` · `FromSavedDialog` · `Toasts` · `ErrorBoundary` | Sign-in and the overlays |
 
 ### Adding a field to a template
 
@@ -340,6 +345,9 @@ list and toasts. A component never calls `fetch` itself, so pointing the app at 
 changing how errors surface, is a one-file change.
 
 ## Deploying with Helm
+
+Moving both apps into an office environment has its own step-by-step checklist:
+[docs/office-migration.md in json-store-api](https://github.com/vsns11/json-store-api/blob/main/docs/office-migration.md).
 
 The chart in `chart/` deploys the bundle to OpenShift or plain Kubernetes. Images come from your CI;
 the chart only deploys them.

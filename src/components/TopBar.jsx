@@ -1,7 +1,6 @@
 import { Icon } from './Icons.jsx'
 import { formatBytes, formatRelativeTime } from '../lib/json.js'
 import { initialsFor, tintClass } from '../lib/palette.js'
-import { shortcut } from '../lib/platform.js'
 import { APP_NAME, BRAND_MARK } from '../config.js'
 
 /** The bar across the top: menu toggle, brand, who is signed in, store totals and search. */
@@ -50,9 +49,6 @@ export default function TopBar({ stats, user, search, searchRef, onSearch, onSig
           aria-label="Search profiles"
           onChange={(event) => onSearch(event.target.value)}
         />
-        <span className="kbd" aria-hidden="true">
-          {shortcut('K')}
-        </span>
       </div>
 
       {user && (

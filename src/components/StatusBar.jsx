@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import { formatBytes, formatRelativeTime } from '../lib/json.js'
-import { shortcut } from '../lib/platform.js'
 
 /**
  * Where the draft stands against the stored profile. This is the only place the app reports a
@@ -105,7 +104,6 @@ export default function StatusBar({
               className="btn btn-sm btn-primary"
               onClick={onSave}
               disabled={saving || !built || !dirty}
-              title={`Save (${shortcut('S')})`}
             >
               {saving ? <span className="spinner" /> : <Icon.Save />}
               {isNew ? 'Save profile' : 'Save changes'}

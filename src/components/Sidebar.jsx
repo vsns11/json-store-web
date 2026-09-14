@@ -15,7 +15,6 @@ export default function Sidebar({
   onNewProfile,
   onRefresh,
   onToggleTheme,
-  onShowShortcuts,
 }) {
   const items = [
     { key: 'profiles', label: 'All profiles', icon: <Icon.Table />, onClick: onShowProfiles },
@@ -27,7 +26,6 @@ export default function Sidebar({
       icon: theme === 'dark' ? <Icon.Sun /> : <Icon.Moon />,
       onClick: onToggleTheme,
     },
-    { key: 'shortcuts', label: 'Keyboard shortcuts', icon: <Icon.Keyboard />, onClick: onShowShortcuts },
     // An entry with nothing to do for this account, such as New profile for a viewer, is left out.
   ].filter((item) => item.onClick)
 

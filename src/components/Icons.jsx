@@ -100,12 +100,6 @@ export const Icon = {
       <path d="M4 7h16M4 12h16M4 17h16" />
     </svg>
   ),
-  Keyboard: (props) => (
-    <svg {...base} {...props}>
-      <rect x="2" y="6" width="20" height="12" rx="2" />
-      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
-    </svg>
-  ),
   Refresh: (props) => (
     <svg {...base} {...props}>
       <path d="M20 12a8 8 0 1 1-2.3-5.6" />

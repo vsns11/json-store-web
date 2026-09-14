@@ -6,12 +6,14 @@ import { downloadJson } from '../lib/files.js'
 import { loadCatalog } from '../lib/catalog.js'
 import { compose, fieldCards, fieldProblems, fieldsFor, groupProblems } from '../lib/template.js'
 import { inferTemplate } from '../lib/templateMatch.js'
+import { combineProfiles, describeOverlap } from '../lib/combine.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import CompareDialog from './CompareDialog.jsx'
 import DocumentTabs from './DocumentTabs.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import Dialog from './Dialog.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
+import { Icon } from './Icons.jsx'
 import JsonTree from './JsonTree.jsx'
 import ProfileHeader from './ProfileHeader.jsx'
 import TemplateForm from './TemplateForm.jsx'
@@ -54,6 +56,20 @@ function issueFromServer({ field, message }) {
   return { key: field, message }
 }
 
+/**
+ * The details a profile started from saved ones opens with. One source is a copy and keeps its
+ * description; several are named after all of them and bring every tag. The inputs are filled in
+ * once the catalogue has loaded and the templates can be combined.
+ */
+function draftFromSources(sources) {
+  if (sources.length === 1) return { ...draftOf(sources[0]), name: `${sources[0].name} (copy)` }
+  return {
+    ...draftOf(null),
+    name: sources.map((source) => source.name).join(' + '),
+    tags: [...new Set(sources.flatMap((source) => source.tags ?? []))].slice(0, 12),
+  }
+}
+
 /** Composed documents as text, or a single empty one when the selection builds nothing. */
 function textsOf(payload) {
   const entries = Object.entries(payload)
@@ -71,7 +87,8 @@ function textsOf(payload) {
  */
 export default function ProfileEditor({
   profile: opened,
-  copyOf = null,
+  sources = null,
+  onStartFromSaved = null,
   canEdit = true,
   canDelete,
   onSaved,
@@ -85,18 +102,20 @@ export default function ProfileEditor({
   const [saved, setSaved] = useState(opened)
   const [reloading, setReloading] = useState(false)
 
-  const [draft, setDraft] = useState(() =>
-    copyOf ? { ...draftOf(copyOf), name: `${copyOf.name} (copy)` } : draftOf(opened),
-  )
-  const [chosen, setChosen] = useState(() => Object.keys(toTexts((copyOf ?? opened)?.payload))[0])
-  // A copy has never been saved, so it opens as unsaved work: leaving asks first.
-  const [baseline, setBaseline] = useState(() => snapshot(copyOf ? draftOf(null) : draft))
+  const [draft, setDraft] = useState(() => (sources ? draftFromSources(sources) : draftOf(opened)))
+  const [chosen, setChosen] = useState(() => Object.keys(toTexts((sources?.[0] ?? opened)?.payload))[0])
+  // A profile started from saved ones has never been saved itself, so it opens as unsaved work.
+  const [baseline, setBaseline] = useState(() => snapshot(sources ? draftOf(null) : draft))
   // The templates the baseline was composed from, so reverting puts the form back too.
   const baselineTemplate = useRef(opened?.template ?? EMPTY_TEMPLATE)
   // A profile composed from templates remembers its selection, and can be edited as that form again.
   // Older ones do not, so their selection is worked out from the inputs instead.
   const isNew = !saved
-  const [template, setTemplate] = useState((copyOf ?? opened)?.template ?? EMPTY_TEMPLATE)
+  const [template, setTemplate] = useState(
+    (sources?.length === 1 ? sources[0].template : opened?.template) ?? EMPTY_TEMPLATE,
+  )
+  // What combining the saved profiles found — overlaps, identifiers left empty — for the notice.
+  const [combined, setCombined] = useState(null)
   const [inferred, setInferred] = useState(false)
   const [catalog, setCatalog] = useState(null)
   const [catalogError, setCatalogError] = useState(null)
@@ -129,22 +148,13 @@ export default function ProfileEditor({
     loadCatalog()
       .then((loaded) => {
         setCatalog(loaded)
-        if (copyOf) {
-          const source = copyOf.template ?? inferTemplate(loaded, copyOf.payload)
-          if (source) {
-            // A copy keeps what the original was built from, but not what made it that one thing:
-            // fields the catalogue gives an example rather than a default — names, serial numbers,
-            // ids — start empty, so the copy cannot be saved as the original's twin.
-            const identities = new Set(
-              fieldsFor(loaded, source.selection)
-                .filter((field) => field.example !== undefined)
-                .map((field) => field.key),
-            )
-            const kept = Object.fromEntries(
-              Object.entries(source.values ?? {}).filter(([key]) => !identities.has(key)),
-            )
-            const result = compose(loaded, source.selection, kept)
-            setTemplate({ selection: source.selection, values: result.values })
+        if (sources?.length) {
+          // A copy of one, or several combined: each brings its templates and values, and fields the
+          // catalogue gives an example rather than a default start empty for this profile's own.
+          const result = combineProfiles(loaded, sources)
+          setCombined(result)
+          if (Object.values(result.selection).some(Boolean)) {
+            setTemplate({ selection: result.selection, values: result.values })
             setDraft((current) => ({ ...current, documents: textsOf(result.payload) }))
           }
         }
@@ -158,7 +168,7 @@ export default function ProfileEditor({
         }
       })
       .catch((failure) => setCatalogError(failure.message))
-  }, [opened, copyOf])
+  }, [opened, sources])
 
   useEffect(() => {
     fetchCatalog()
@@ -244,8 +254,6 @@ export default function ProfileEditor({
 
   /** Saves the version that was loaded; with `overwrite`, replaces whatever is stored instead. */
   const save = async ({ overwrite = false } = {}) => {
-    // A viewer is offered no Save button, but the keyboard shortcut still arrives here.
-    if (!canEdit) return
     if (!draft.name.trim()) {
       toasts.error('Give the profile a name before saving')
       return
@@ -352,31 +360,6 @@ export default function ProfileEditor({
   // Closing the editor always leaves the app with nothing outstanding.
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
-  // Keyboard shortcuts read the latest handlers through a ref, so the listener is bound once
-  // instead of being torn down and rebuilt on every keystroke.
-  const latest = useRef({})
-  useEffect(() => {
-    latest.current = { save, back: onBack }
-  })
-
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)
-      // Esc goes back to the table — but not out from under someone typing, and not while a
-      // dialog is open, since the dialog wants it first.
-      if (event.key === 'Escape' && !typing && !window.document.querySelector('.overlay')) {
-        latest.current.back?.()
-        return
-      }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault()
-        latest.current.save()
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
-
   return (
     <section className="panel" aria-label={isNew ? 'New profile' : `Profile ${saved.name}`}>
       <ProfileHeader
@@ -404,11 +387,36 @@ export default function ProfileEditor({
           <JsonTree value={parsed.value} />
         ) : catalog ? (
           <div className="template-form">
-            {copyOf && isNew && (
-              <p className="notice notice-info">
-                A copy of “{copyOf.name}”, not saved yet. Fields that identify one particular thing start empty,
-                ready for this one’s own.
-              </p>
+            {isNew && canEdit && onStartFromSaved && (
+              <div className="from-saved-start">
+                <button className="btn btn-sm" onClick={onStartFromSaved}>
+                  <Icon.Copy /> Start from saved profiles…
+                </button>
+                <span className="muted">Use the templates and values of one or more profiles already saved.</span>
+              </div>
+            )}
+            {sources && isNew && (
+              <div className="notice notice-info">
+                <p>
+                  {sources.length === 1
+                    ? `A copy of “${sources[0].name}”, not saved yet.`
+                    : `Combined from ${sources.map((source) => `“${source.name}”`).join(', ')}, not saved yet.`}{' '}
+                  Fields that identify one particular thing start empty, ready for this one’s own.
+                </p>
+                {combined?.overlaps.length > 0 && (
+                  <>
+                    <p>Where they overlap, the later one is used:</p>
+                    <ul>
+                      {combined.overlaps.map((overlap) => (
+                        <li key={`${overlap.kind}-${overlap.key}`}>{describeOverlap(overlap)}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {combined?.skipped.length > 0 && (
+                  <p>No templates were found behind {combined.skipped.join(', ')}, so nothing was taken from them.</p>
+                )}
+              </div>
             )}
             {!canEdit && (
               <p className="notice notice-info">

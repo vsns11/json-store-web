@@ -4,7 +4,7 @@ import ConfirmDialog from './components/ConfirmDialog.jsx'
 import ProfileEditor from './components/ProfileEditor.jsx'
 import ProfileTable from './components/ProfileTable.jsx'
 import LoginScreen from './components/LoginScreen.jsx'
-import ShortcutsDialog from './components/ShortcutsDialog.jsx'
+import FromSavedDialog from './components/FromSavedDialog.jsx'
 import TopBar from './components/TopBar.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Toasts from './components/Toasts.jsx'
@@ -44,10 +44,12 @@ export default function App() {
   const [view, setView] = useState('table') // 'table' while browsing, 'editor' while editing one
   const [selected, setSelected] = useState(null) // the open profile, or null for a new one
   const [editorKey, setEditorKey] = useState('new')
-  // The profile a new, unsaved copy starts from, while one is open; otherwise null.
-  const [copySource, setCopySource] = useState(null)
+  // The saved profiles a new, unsaved one starts from — one for a duplicate, several combined — while
+  // such a profile is open; otherwise null.
+  const [draftSources, setDraftSources] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
-  const [showShortcuts, setShowShortcuts] = useState(false)
+  // Open while saved profiles are being picked to start a new one from.
+  const [pickingSaved, setPickingSaved] = useState(false)
   // Set while the editor holds unsaved work, so leaving can ask first.
   const [editorDirty, setEditorDirty] = useState(false)
   const [pendingLeave, setPendingLeave] = useState(null)
@@ -84,9 +86,6 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', warn)
   }, [editorDirty])
 
-  // The latest handlers, readable from listeners that are bound once.
-  const latest = useRef({})
-
   /**
    * Runs an action that leaves the editor. With unsaved work it asks first and remembers what was
    * being attempted, so answering the question carries on where it left off.
@@ -101,29 +100,13 @@ export default function App() {
     setView('table')
   }
 
-  latest.current = { leaveEditor, showTable }
-
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        latest.current.leaveEditor(() => {
-          latest.current.showTable()
-          searchRef.current?.focus()
-        })
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
-
   const openProfile = (id) => leaveEditor(() => loadProfile(id))
 
   const loadProfile = async (id) => {
     try {
       const profile = await api.get(id)
       setSelected(profile)
-      setCopySource(null)
+      setDraftSources(null)
       setEditorKey(profile.id)
       setView('editor')
     } catch (failure) {
@@ -134,7 +117,7 @@ export default function App() {
   const startNewProfile = () =>
     leaveEditor(() => {
       setSelected(null)
-      setCopySource(null)
+      setDraftSources(null)
       setEditorKey(`new-${Date.now()}`)
       setView('editor')
     })
@@ -152,7 +135,8 @@ export default function App() {
   const signOutAndClose = () => {
     setEditorDirty(false)
     setSelected(null)
-    setCopySource(null)
+    setDraftSources(null)
+    setPickingSaved(false)
     setView('table')
     signOut()
   }
@@ -180,13 +164,24 @@ export default function App() {
   const copyProfile = async (summary) => {
     try {
       const original = await api.get(summary.id)
-      setSelected(null)
-      setCopySource(original)
-      setEditorKey(`copy-${original.id}-${Date.now()}`)
-      setView('editor')
+      openDraftFrom([original])
     } catch (failure) {
       toasts.error(failure.message)
     }
+  }
+
+  /** Opens a new, unsaved profile built from saved ones: a copy of one, or several combined. */
+  const openDraftFrom = (profiles) => {
+    setSelected(null)
+    setDraftSources(profiles)
+    setEditorKey(`from-${profiles.map((profile) => profile.id).join('-')}-${Date.now()}`)
+    setView('editor')
+  }
+
+  /** The picked profiles open once any unsaved work on screen has been asked about. */
+  const openPickedProfiles = (profiles) => {
+    setPickingSaved(false)
+    leaveEditor(() => openDraftFrom(profiles))
   }
 
   const deleteProfile = async () => {
@@ -248,7 +243,6 @@ export default function App() {
           onNewProfile={mayEdit(user) ? startNewProfile : null}
           onRefresh={refresh}
           onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          onShowShortcuts={() => setShowShortcuts(true)}
         />
 
         <main className="content" id="content" tabIndex={-1}>
@@ -261,6 +255,7 @@ export default function App() {
               error={error}
               onRetry={refresh}
               onNew={mayEdit(user) ? startNewProfile : null}
+              onNewFromSaved={mayEdit(user) ? () => setPickingSaved(true) : null}
               onOpen={openProfile}
               onDuplicate={mayEdit(user) ? duplicateProfile : null}
               onDelete={mayDelete(user) ? setPendingDelete : null}
@@ -269,7 +264,8 @@ export default function App() {
             <ProfileEditor
               key={editorKey}
               profile={selected}
-              copyOf={copySource}
+              sources={draftSources}
+              onStartFromSaved={mayEdit(user) ? () => setPickingSaved(true) : null}
               canEdit={mayEdit(user)}
               canDelete={mayDelete(user)}
               onDirtyChange={setEditorDirty}
@@ -278,7 +274,7 @@ export default function App() {
                 // Stay on the profile that was just saved; only the list behind it needs refreshing.
                 setEditorDirty(false)
                 setSelected(profile)
-                setCopySource(null)
+                setDraftSources(null)
                 refresh()
               }}
               onDeleted={() => {
@@ -317,7 +313,7 @@ export default function App() {
         />
       )}
 
-      {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+      {pickingSaved && <FromSavedDialog onClose={() => setPickingSaved(false)} onOpen={openPickedProfiles} />}
 
       {/* The session ran out mid-work: the app stays as it is, and signing in again carries on. */}
       {status === 'expired' && <LoginScreen onSignIn={signIn} expired overlay />}

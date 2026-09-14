@@ -42,6 +42,7 @@ export default function ProfileTable({
   error,
   onRetry,
   onNew,
+  onNewFromSaved,
   onOpen,
   onDuplicate,
   onDelete,
@@ -75,6 +76,11 @@ export default function ProfileTable({
         )}
         {loading && <span className="spinner" role="status" aria-label="Loading" />}
         <span className="table-head-spacer" />
+        {onNewFromSaved && items.length > 0 && (
+          <button className="btn btn-sm" onClick={onNewFromSaved}>
+            <Icon.Copy /> From saved profiles
+          </button>
+        )}
         {onNew && (
           <button className="btn btn-primary btn-sm" onClick={onNew}>
             <Icon.Plus /> New profile
