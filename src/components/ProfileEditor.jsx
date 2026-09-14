@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api } from '../api/client.js'
+import { api, OVERWRITE } from '../api/client.js'
 import { byteSize, describeShape, parseJson, sortJsonKeys } from '../lib/json.js'
 import { DEFAULT_DOCUMENT, invalidDocuments, sortByName, toPayload, toTexts } from '../lib/documents.js'
 import { downloadJson } from '../lib/files.js'
@@ -10,6 +10,7 @@ import { useToasts } from '../hooks/useToasts.jsx'
 import CompareDialog from './CompareDialog.jsx'
 import DocumentTabs from './DocumentTabs.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import Dialog from './Dialog.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
 import JsonTree from './JsonTree.jsx'
 import ProfileHeader from './ProfileHeader.jsx'
@@ -80,6 +81,8 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   const [view, setView] = useState('form')
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // Set when a save was refused because someone else saved first: what the API said happened.
+  const [conflict, setConflict] = useState(null)
   const [comparing, setComparing] = useState(false)
   // One line in the status bar saying what just happened. It replaces itself and then clears,
   // so routine confirmations never pile up the way a stack of pop-ups does.
@@ -167,7 +170,8 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
     if (!(active in changes.documents)) setChosen(Object.keys(changes.documents)[0])
   }
 
-  const save = async () => {
+  /** Saves the version that was loaded; with `overwrite`, replaces whatever is stored instead. */
+  const save = async ({ overwrite = false } = {}) => {
     if (!draft.name.trim()) {
       toasts.error('Give the profile a name before saving')
       return
@@ -193,7 +197,9 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         tags: draft.tags,
         template: governed ? template : null,
       }
-      const result = isNew ? await api.create(body) : await api.update(saved.id, body)
+      const result = isNew
+        ? await api.create(body)
+        : await api.update(saved.id, body, overwrite ? OVERWRITE : saved.version)
       // What was stored is what the server built, so the editor adopts it rather than its own preview.
       const stored = draftOf(result)
       setSaved(result)
@@ -206,6 +212,10 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
       flash(isNew ? 'Saved' : 'Saved your changes')
       onSaved(result)
     } catch (error) {
+      if (error.status === 412) {
+        setConflict(error.message)
+        return
+      }
       // Refused inputs name each field; the first one says what to fix, and the form is where to fix it.
       if (error.status === 422) setView('form')
       toasts.error(error.message)
@@ -238,11 +248,11 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
   const remove = async () => {
     setConfirmingDelete(false)
     try {
-      await api.remove(saved.id)
+      await api.remove(saved.id, saved.version)
       toasts.success(`Deleted “${saved.name}”`)
       onDeleted()
     } catch (error) {
-      toasts.error(error.message)
+      toasts.error(error.status === 412 ? `${error.message}. Reload to see the change before deleting it.` : error.message)
     }
   }
 
@@ -390,6 +400,44 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
           current={{ id: saved.id, name: draft.name, payload: toPayload(draft.documents) }}
           onClose={() => setComparing(false)}
         />
+      )}
+
+      {conflict && (
+        <Dialog
+          title="Saved by someone else first"
+          onClose={() => setConflict(null)}
+          actions={
+            <>
+              <button className="btn" onClick={() => setConflict(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  setConflict(null)
+                  reload()
+                }}
+                autoFocus
+              >
+                Load their version
+              </button>
+              <button
+                className="btn btn-danger-solid"
+                onClick={() => {
+                  setConflict(null)
+                  save({ overwrite: true })
+                }}
+              >
+                Overwrite with mine
+              </button>
+            </>
+          }
+        >
+          <p>{conflict}.</p>
+          <p className="muted">
+            Loading their version discards your unsaved changes here. Overwriting replaces what they saved.
+          </p>
+        </Dialog>
       )}
 
       {confirmingDelete && (

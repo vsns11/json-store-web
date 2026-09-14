@@ -51,6 +51,15 @@ export class ApiError extends Error {
   }
 }
 
+/** Passed as a profile's version to overwrite whatever is stored, rather than the version loaded. */
+export const OVERWRITE = '*'
+
+/**
+ * A change names the version it was made to, so the API can refuse one made to an out-of-date copy
+ * (412) instead of silently overwriting someone else's save.
+ */
+const ifMatch = (version) => ({ 'If-Match': version === OVERWRITE ? OVERWRITE : `"${version}"` })
+
 /** Sign-in and refresh report their own failures; a 401 from them does not end the session. */
 const AUTH_CALLS = ['/auth/login', '/auth/refresh']
 
@@ -122,12 +131,12 @@ export const api = {
     return request('/profiles', { method: 'POST', body: JSON.stringify(document) })
   },
 
-  update(id, document) {
-    return request(`/profiles/${id}`, { method: 'PUT', body: JSON.stringify(document) })
+  update(id, document, version) {
+    return request(`/profiles/${id}`, { method: 'PUT', body: JSON.stringify(document), headers: ifMatch(version) })
   },
 
-  remove(id) {
-    return request(`/profiles/${id}`, { method: 'DELETE' })
+  remove(id, version) {
+    return request(`/profiles/${id}`, { method: 'DELETE', headers: ifMatch(version) })
   },
 
   stats() {

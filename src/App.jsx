@@ -179,12 +179,13 @@ export default function App() {
     const target = pendingDelete
     setPendingDelete(null)
     try {
-      await api.remove(target.id)
+      await api.remove(target.id, target.version)
       toasts.success(`Deleted “${target.name}”`)
       if (selected?.id === target.id) setSelected(null)
       refresh()
     } catch (failure) {
-      toasts.error(failure.message)
+      toasts.error(failure.status === 412 ? `${failure.message}. The list now shows the latest.` : failure.message)
+      if (failure.status === 412) refresh()
     }
   }
 
