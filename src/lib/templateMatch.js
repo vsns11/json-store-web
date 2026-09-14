@@ -46,10 +46,32 @@ export function inferTemplate(catalog, payload) {
  */
 function matchesAnyDocument(fragment, payload, found) {
   return Object.entries(fragment.documents ?? {}).every(([system, body]) => {
+    // Each document is tried into a scratch object and only kept if the whole body matched. Matching
+    // straight into `found` let a document that failed half-way leave its values behind, and the
+    // document that then matched could not overwrite them.
+    const tryOn = (document) => {
+      const attempt = {}
+      if (!matches(body, document, attempt)) return false
+      keepBest(found, attempt)
+      return true
+    }
     const named = payload[system]
-    if (named !== undefined && matches(body, named, found)) return true
-    return Object.values(payload).some((document) => matches(body, document, found))
+    if (named !== undefined && tryOn(named)) return true
+    return Object.values(payload).some(tryOn)
   })
+}
+
+/**
+ * Folds a successful attempt into what has been found so far. A value read from a placeholder that
+ * stood alone kept its type, while one cut out of a longer string is only ever text, so a typed
+ * value is never replaced by text — whichever document happened to be matched first.
+ */
+function keepBest(found, attempt) {
+  for (const [key, value] of Object.entries(attempt)) {
+    if (!Object.hasOwn(found, key) || (typeof found[key] === 'string' && typeof value !== 'string')) {
+      found[key] = value
+    }
+  }
 }
 
 function matches(body, value, found) {
@@ -109,7 +131,7 @@ function matchesString(body, value, found) {
   keys.forEach((key, index) => {
     // A value cut out of a longer string can only ever be text. One read from a placeholder that
     // stood alone kept its type, so it is the better of the two and is not overwritten here.
-    if (!(key in found)) found[key] = match[index + 1]
+    if (!Object.hasOwn(found, key)) found[key] = match[index + 1]
   })
   return true
 }

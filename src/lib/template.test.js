@@ -144,3 +144,61 @@ describe('inferTemplate', () => {
     expect(inferTemplate(catalog, merged).selection).toEqual({ scenario: 'checkout' })
   })
 })
+
+describe('composing the way the server does', () => {
+  const one = (fields, body) => ({
+    groups: [{ id: 'g', label: 'G', required: true }],
+    fragments: [{ id: 'f', group: 'g', name: 'F', fields, documents: { main: body } }],
+  })
+
+  it('writes a list or object inside a longer string as JSON, and null as nothing', () => {
+    const catalog = one(
+      [{ key: 'servers', type: 'tags' }, { key: 'meta', type: 'text' }, { key: 'note', type: 'text' }],
+      { summary: 'dns=${servers}', info: 'meta=${meta}', label: 'note:${note}', raw: '${note}' },
+    )
+    const { payload } = compose(catalog, { g: 'f' }, { servers: ['10.0.0.1', '10.0.0.2'], meta: { a: 1 }, note: null })
+    expect(payload.main.summary).toBe('dns=["10.0.0.1","10.0.0.2"]')
+    expect(payload.main.info).toBe('meta={"a":1}')
+    expect(payload.main.label).toBe('note:')
+    // Standing alone, a placeholder keeps the value's type, so null stays null.
+    expect(payload.main.raw).toBeNull()
+  })
+
+  it('leaves a number with no default empty as null, never as an empty string', () => {
+    const catalog = one([{ key: 'ports', type: 'number' }], { value: '${ports}' })
+    const { payload, values } = compose(catalog, { g: 'f' }, {})
+    expect(values.ports).toBeNull()
+    expect(payload.main.value).toBeNull()
+  })
+
+  it('takes a shared field\'s default from the first declaration that has one', () => {
+    const catalog = {
+      groups: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+      fragments: [
+        { id: 'fa', group: 'a', name: 'FA', fields: [{ key: 'v', type: 'text' }], documents: { main: { x: '${v}' } } },
+        { id: 'fb', group: 'b', name: 'FB', fields: [{ key: 'v', type: 'text', default: 'fromB' }], documents: { main: { y: '${v}' } } },
+      ],
+    }
+    expect(compose(catalog, { a: 'fa', b: 'fb' }, {}).values.v).toBe('fromB')
+  })
+
+  it('does not treat names on Object.prototype as values', () => {
+    const catalog = one([{ key: 'a', type: 'text', default: 'x' }], { k: '${toString}', s: 'c=${constructor}', a: '${a}' })
+    const { payload } = compose(catalog, { g: 'f' }, {})
+    expect(payload.main.k).toBe('${toString}')
+    expect(payload.main.s).toBe('c=${constructor}')
+    expect(payload.main.a).toBe('x')
+  })
+})
+
+describe('inferring a template from stored inputs', () => {
+  it('does not keep a value from a document that only half matched', () => {
+    const catalog = {
+      groups: [{ id: 'g', label: 'G', required: true }],
+      fragments: [{ id: 'f', group: 'g', name: 'F', fields: [{ key: 'a', type: 'text' }], documents: { sys: { x: 'id-${a}', lit: 1 } } }],
+    }
+    // The document named "sys" matches x but fails on lit; "other" matches in full.
+    const payload = { sys: { x: 'id-WRONG', lit: 2 }, other: { x: 'id-RIGHT', lit: 1 } }
+    expect(inferTemplate(catalog, payload).values.a).toBe('RIGHT')
+  })
+})

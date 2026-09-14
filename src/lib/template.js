@@ -37,15 +37,24 @@ function fragmentsFor(catalog, selection) {
     .filter(Boolean)
 }
 
-/** Every field the current selection asks for, in order, without duplicates. */
+/**
+ * Every field the current selection asks for, in order, without duplicates. When two templates
+ * declare the same key, the first declaration is the one shown, but its default comes from the first
+ * declaration that has one — the same rule the server composes by, so one template without a default
+ * cannot hide another's.
+ */
 export function fieldsFor(catalog, selection) {
   const used = usedFieldKeys(catalog, selection)
-  const seen = new Set()
-  return fragmentsFor(catalog, selection).flatMap((fragment) =>
-    (fragment.fields ?? [])
-      .filter((field) => used.has(field.key) && !seen.has(field.key) && seen.add(field.key))
-      .map((field) => ({ ...field, fragment: fragment.name })),
-  )
+  const byKey = new Map()
+  for (const fragment of fragmentsFor(catalog, selection)) {
+    for (const field of fragment.fields ?? []) {
+      if (!used.has(field.key)) continue
+      const kept = byKey.get(field.key)
+      if (!kept) byKey.set(field.key, { ...field, fragment: fragment.name })
+      else if (kept.default === undefined && field.default !== undefined) kept.default = field.default
+    }
+  }
+  return [...byKey.values()]
 }
 
 /** Fields grouped by the fragment that asked for them — one card each in the composer. */
@@ -64,18 +73,22 @@ export function fieldCards(catalog, selection) {
     .filter((card) => card.fields.length > 0)
 }
 
+// What a field holds before anyone fills it. A number is null rather than "", because an empty string
+// substituted into "${ports}" would store "" where the catalogue declared an integer.
 const EMPTY_FOR_TYPE = {
   checkboxes: () => [],
   tags: () => [],
   switch: () => false,
   checkbox: () => false,
   boolean: () => false,
+  number: () => null,
+  range: () => null,
 }
 
 export function defaultValues(fields, existing = {}) {
   return Object.fromEntries(
     fields.map((field) => {
-      if (field.key in existing) return [field.key, existing[field.key]]
+      if (Object.hasOwn(existing, field.key)) return [field.key, existing[field.key]]
       if (field.default !== undefined) return [field.key, field.default]
       return [field.key, (EMPTY_FOR_TYPE[field.type] ?? (() => ''))()]
     }),
@@ -127,10 +140,21 @@ function substitute(value, values) {
 
   const whole = value.match(/^\$\{([\w.]+)\}$/)
   if (whole) {
-    // The only content is a placeholder, so the field's own type survives.
-    return whole[1] in values ? values[whole[1]] : value
+    // The only content is a placeholder, so the field's own type survives, null included.
+    return Object.hasOwn(values, whole[1]) ? values[whole[1]] : value
   }
-  return value.replace(PLACEHOLDER, (match, key) => (key in values ? String(values[key]) : match))
+  return value.replace(PLACEHOLDER, (match, key) => (Object.hasOwn(values, key) ? inline(values[key]) : match))
+}
+
+/**
+ * How a value reads inside a longer string: text as itself, nothing for null, and a list or object
+ * as JSON. `String(value)` would print a list as "a,b" and an object as "[object Object]", and the
+ * server writes JSON, so the two would disagree about what was stored.
+ */
+function inline(value) {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
 }
 
 function deepMerge(base, addition) {
@@ -139,7 +163,7 @@ function deepMerge(base, addition) {
   if (isPlainObject(base) && isPlainObject(addition)) {
     const merged = { ...base }
     for (const [key, value] of Object.entries(addition)) {
-      merged[key] = key in merged ? deepMerge(merged[key], value) : value
+      merged[key] = Object.hasOwn(merged, key) ? deepMerge(merged[key], value) : value
     }
     return merged
   }
