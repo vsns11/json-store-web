@@ -4,7 +4,7 @@ import { byteSize, describeShape, parseJson, sortJsonKeys } from '../lib/json.js
 import { DEFAULT_DOCUMENT, invalidDocuments, sortByName, toPayload, toTexts } from '../lib/documents.js'
 import { downloadJson } from '../lib/files.js'
 import { loadCatalog } from '../lib/catalog.js'
-import { compose, fieldCards, fieldsFor, missingFields } from '../lib/template.js'
+import { compose, fieldCards, fieldProblems, fieldsFor, groupProblems } from '../lib/template.js'
 import { inferTemplate } from '../lib/templateMatch.js'
 import { useToasts } from '../hooks/useToasts.jsx'
 import CompareDialog from './CompareDialog.jsx'
@@ -42,6 +42,13 @@ function draftOf(profile) {
     // counts read exactly what will be stored.
     documents: toTexts(profile?.payload),
   }
+}
+
+/** A field the API refused, keyed the way the form keys its own problems. */
+function issueFromServer({ field, message }) {
+  if (field.startsWith('template.values.')) return { key: field.slice('template.values.'.length), message }
+  if (field.startsWith('template.selection.')) return { key: `group:${field.slice('template.selection.'.length)}`, message }
+  return { key: field, message }
 }
 
 /** Composed documents as text, or a single empty one when the selection builds nothing. */
@@ -142,10 +149,40 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
     () => (catalog && template ? fieldCards(catalog, template.selection) : []),
     [catalog, template],
   )
-  const missing = useMemo(
-    () => (catalog && template ? missingFields(fieldsFor(catalog, template.selection), template.values) : []),
-    [catalog, template],
+  // What would stop a save, by the rules the server checks: required groups first, then fields. A
+  // profile that was never built from templates has none, because saving it changes only its details.
+  const checked = isNew || governed
+  const problems = useMemo(
+    () =>
+      catalog && checked
+        ? [
+            ...groupProblems(catalog, template.selection),
+            ...fieldProblems(fieldsFor(catalog, template.selection), template.values),
+          ]
+        : [],
+    [catalog, checked, template],
   )
+  // A fresh form is not shouted at: its own problems are shown once a save has been tried. What the
+  // server refused is shown straight away, and stays until the form changes.
+  const [attempted, setAttempted] = useState(false)
+  const [serverIssues, setServerIssues] = useState([])
+  const [summarySignal, setSummarySignal] = useState(0)
+  const shown = useMemo(() => {
+    const byKey = new Map(serverIssues.map((issue) => [issue.key, issue]))
+    if (attempted) problems.forEach((problem) => byKey.set(problem.key, problem))
+    return [...byKey.values()]
+  }, [attempted, problems, serverIssues])
+  const errors = useMemo(() => Object.fromEntries(shown.map((problem) => [problem.key, problem.message])), [shown])
+
+  const showProblems = () => {
+    setAttempted(true)
+    setView('form')
+    setSummarySignal((signal) => signal + 1)
+  }
+  const clearProblems = () => {
+    setAttempted(false)
+    setServerIssues([])
+  }
 
   // jsonb does not preserve key order, so the comparison has to ignore it.
   const matchesTemplate = useMemo(() => {
@@ -158,6 +195,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
 
   /** Any change in the form rebuilds the inputs from the template. */
   const recompose = (selection, values) => {
+    setServerIssues([])
     const result = compose(catalog, selection, values)
     setTemplate({ selection, values: result.values })
 
@@ -176,13 +214,12 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
       toasts.error('Give the profile a name before saving')
       return
     }
-    if (unbuilt.length > 0) {
-      toasts.error('Pick a template to build the inputs before saving')
-      setView('form')
+    if (problems.length > 0) {
+      showProblems()
       return
     }
-    if (missing.length > 0) {
-      toasts.error(`Fill in “${missing[0].label}” first — the template needs it`)
+    if (unbuilt.length > 0) {
+      toasts.error('Pick a template to build the inputs before saving')
       setView('form')
       return
     }
@@ -209,6 +246,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
       if (!(active in stored.documents)) setChosen(Object.keys(stored.documents)[0])
       baselineTemplate.current = result.template ?? EMPTY_TEMPLATE
       setInferred(false)
+      clearProblems()
       flash(isNew ? 'Saved' : 'Saved your changes')
       onSaved(result)
     } catch (error) {
@@ -216,8 +254,12 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         setConflict(error.message)
         return
       }
-      // Refused inputs name each field; the first one says what to fix, and the form is where to fix it.
-      if (error.status === 422) setView('form')
+      // Refused inputs name each field, and the form is where to fix them, so they are listed there.
+      if (error.status === 422 && error.fieldErrors.length > 0) {
+        setServerIssues(error.fieldErrors.map(issueFromServer))
+        showProblems()
+        return
+      }
       toasts.error(error.message)
     } finally {
       setSaving(false)
@@ -236,6 +278,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
       setTemplate(stored.template ?? EMPTY_TEMPLATE)
       baselineTemplate.current = stored.template ?? EMPTY_TEMPLATE
       setInferred(false)
+      clearProblems()
       setChosen(Object.keys(fresh.documents)[0])
       flash('Loaded the stored version')
     } catch (failure) {
@@ -352,8 +395,11 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
               selection={template.selection}
               values={template.values}
               cards={cards}
-              invalidKeys={missing.map((field) => field.key)}
-              showPickers={isNew || !governed}
+              errors={errors}
+              summary={shown}
+              summarySignal={summarySignal}
+              // A settled profile hides its pickers, unless a required group is the thing to fix.
+              showPickers={isNew || !governed || problems.some((problem) => problem.key.startsWith('group:'))}
               onSelect={(selection) => recompose(selection, template.values)}
               onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
             />
@@ -390,6 +436,7 @@ export default function ProfileEditor({ profile: opened, canDelete, onSaved, onD
         onRevert={() => {
           setDraft(JSON.parse(baseline))
           setTemplate(baselineTemplate.current)
+          clearProblems()
           flash('Went back to the last saved version')
         }}
         onDelete={() => setConfirmingDelete(true)}

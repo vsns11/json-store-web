@@ -118,6 +118,71 @@ function composeDocument(catalog, selection, values) {
   return documents
 }
 
+/** Required groups with no template chosen yet, keyed `group:<id>` so they sit beside field problems. */
+export function groupProblems(catalog, selection) {
+  if (!catalog) return []
+  return catalog.groups
+    .filter((group) => group.required && !selection[group.id])
+    .map((group) => ({ key: `group:${group.id}`, label: group.label, message: `Choose a template for ${group.label}` }))
+}
+
+/**
+ * What is wrong with each value, by the rules the server refuses a save by, so the form can say so
+ * before the round trip. The server still checks: this is a courtesy, not the gate.
+ */
+export function fieldProblems(fields, values) {
+  return fields
+    .map((field) => ({ key: field.key, label: field.label ?? field.key, message: problemWith(field, values[field.key]) }))
+    .filter((problem) => problem.message)
+}
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+
+const optionValues = (field) =>
+  (field.options ?? []).map((option) => String(typeof option === 'object' ? option.value : option))
+
+function problemWith(field, value) {
+  const label = field.label ?? field.key
+  const blank =
+    value === null ||
+    value === undefined ||
+    (typeof value === 'string' && value.trim() === '') ||
+    (Array.isArray(value) && value.length === 0)
+  if (blank) return field.required ? `${label} is required` : null
+
+  switch (field.type ?? 'text') {
+    case 'number':
+    case 'range':
+      if (typeof value !== 'number' || !Number.isFinite(value)) return `${label} must be a number`
+      if (typeof field.min === 'number' && value < field.min) return `${label} must be at least ${field.min}`
+      if (typeof field.max === 'number' && value > field.max) return `${label} must be at most ${field.max}`
+      return null
+    case 'date':
+      if (typeof value !== 'string' || !DATE.test(value)) return `${label} must be a date, written as YYYY-MM-DD`
+      // 2026-02-31 has the right shape, but no such day exists; Date would quietly roll it into March.
+      if (Number.isNaN(Date.parse(value)) || new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) !== value) {
+        return `${label} is not a real date`
+      }
+      return null
+    case 'select':
+    case 'radio': {
+      const allowed = optionValues(field)
+      return allowed.includes(String(value)) ? null : `${label} must be one of ${allowed.join(', ')}`
+    }
+    case 'checkboxes': {
+      const allowed = optionValues(field)
+      return Array.isArray(value) && value.every((item) => allowed.includes(String(item)))
+        ? null
+        : `${label} can only include ${allowed.join(', ')}`
+    }
+    default:
+      if (field.pattern && typeof value === 'string' && !new RegExp(`^(?:${field.pattern})$`).test(value)) {
+        return `${label} is not in the expected format`
+      }
+      return null
+  }
+}
+
 /** Which fields are required by the selection but still empty. */
 export function missingFields(fields, values) {
   return fields.filter((field) => {

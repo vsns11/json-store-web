@@ -307,8 +307,19 @@ template becomes a card of its own fields, so a fragment's inputs stay together 
 A field is only shown if the fragment bodies actually substitute it — a `${key}` that appears nowhere
 changes nothing, so it is never asked for.
 
-Every type also takes `label`, `key`, `default`, `required` and `help`. `options` are plain strings, or
-`{ value, label }` when the stored value should differ from what is shown.
+Every type also takes `label`, `key`, `default`, `example`, `required`, `pattern` and `help`. `options`
+are plain strings, or `{ value, label }` when the stored value should differ from what is shown.
+
+A `default` is a real value: it is filled in and stored unless someone changes it. An `example` is only
+a hint shown in the empty box, and is never stored. Use `example` for anything that identifies one
+particular thing — a serial number, a MAC address, a customer id — so a profile cannot be saved with
+the sample identity of something that does not exist. `pattern` is a regular expression the whole value
+must match.
+
+The form checks values by the same rules the API refuses a save by: required, a number within `min` and
+`max`, a real date, one of the `options`, the `pattern`. A required group has no "none" choice. When a
+save is refused, every problem is listed above the form, each a link to its field, and the fields
+themselves are marked and described for screen readers.
 
 ```json
 { "key": "environment", "label": "Environment", "type": "radio",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compose, fieldCards, fieldsFor, missingFields } from './template.js'
+import { compose, fieldCards, fieldProblems, fieldsFor, groupProblems, missingFields } from './template.js'
 import { inferTemplate } from './templateMatch.js'
 
 /** A small catalogue with the shapes the real one uses: shared fields, typed placeholders, lists. */
@@ -200,5 +200,57 @@ describe('inferring a template from stored inputs', () => {
     // The document named "sys" matches x but fails on lit; "other" matches in full.
     const payload = { sys: { x: 'id-WRONG', lit: 2 }, other: { x: 'id-RIGHT', lit: 1 } }
     expect(inferTemplate(catalog, payload).values.a).toBe('RIGHT')
+  })
+})
+
+describe('the problems a save is refused for', () => {
+  const fields = [
+    { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'ports', label: 'Ports', type: 'number', min: 1, max: 48 },
+    { key: 'since', label: 'In service since', type: 'date' },
+    { key: 'vendor', label: 'Vendor', type: 'select', options: ['Nokia', { value: 'Huawei', label: 'Huawei' }] },
+    { key: 'flags', label: 'Flags', type: 'checkboxes', options: ['a', 'b'] },
+    { key: 'serial', label: 'Serial', type: 'text', pattern: '[A-Z]{4}[0-9A-F]{8}' },
+  ]
+
+  it('says nothing about optional fields left empty, including a number emptied to null', () => {
+    expect(fieldProblems(fields, { name: 'ONU-1', ports: null, since: '', vendor: '', flags: [], serial: '' })).toEqual([])
+  })
+
+  it('names each value the server would refuse, with the same words', () => {
+    const problems = fieldProblems(fields, {
+      name: '  ',
+      ports: 64,
+      since: '2026-02-31',
+      vendor: 'Cisco',
+      flags: ['a', 'z'],
+      serial: 'alcl0a1b2c3d',
+    })
+    expect(Object.fromEntries(problems.map((problem) => [problem.key, problem.message]))).toEqual({
+      name: 'Name is required',
+      ports: 'Ports must be at most 48',
+      since: 'In service since is not a real date',
+      vendor: 'Vendor must be one of Nokia, Huawei',
+      flags: 'Flags can only include a, b',
+      serial: 'Serial is not in the expected format',
+    })
+  })
+
+  it('refuses text where a number belongs', () => {
+    expect(fieldProblems(fields, { name: 'x', ports: '4' })[0]).toMatchObject({ key: 'ports', message: 'Ports must be a number' })
+  })
+
+  it('asks for a template in every required group left unset', () => {
+    const catalog = {
+      groups: [
+        { id: 'resource', label: 'Resource type', required: true },
+        { id: 'site', label: 'Site' },
+      ],
+      fragments: [],
+    }
+    expect(groupProblems(catalog, {})).toEqual([
+      { key: 'group:resource', label: 'Resource type', message: 'Choose a template for Resource type' },
+    ])
+    expect(groupProblems(catalog, { resource: 'onu' })).toEqual([])
   })
 })
