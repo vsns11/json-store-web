@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compose, fieldCards, fieldProblems, fieldsFor, groupProblems, missingFields } from './template.js'
+import { compose, fieldCards, fieldProblems, fieldsFor, groupProblems, missingFields, unknownTemplates } from './template.js'
 import { inferTemplate } from './templateMatch.js'
 
 /** A small catalogue with the shapes the real one uses: shared fields, typed placeholders, lists. */
@@ -252,5 +252,19 @@ describe('the problems a save is refused for', () => {
       { key: 'group:resource', label: 'Resource type', message: 'Choose a template for Resource type' },
     ])
     expect(groupProblems(catalog, { resource: 'onu' })).toEqual([])
+  })
+})
+
+describe('templates the catalogue in use does not have', () => {
+  it('names groups and templates from another catalogue, and nothing this one offers', () => {
+    const selection = { scenario: 'checkout', payment: 'card', customer: 'returning-customer', resource: 'onu', fulfilment: '' }
+    expect(unknownTemplates(catalog, selection)).toEqual([
+      { group: 'customer', template: 'returning-customer' },
+      { group: 'resource', template: 'onu' },
+    ])
+  })
+
+  it('catches a known template filed under the wrong group', () => {
+    expect(unknownTemplates(catalog, { payment: 'checkout' })).toEqual([{ group: 'payment', template: 'checkout' }])
   })
 })

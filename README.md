@@ -211,7 +211,9 @@ property the stylesheet cannot parse would strip the colour from every accented 
 Every colour that carries text clears WCAG AA, 4.5:1, against each surface it is actually drawn on,
 in both themes. That is 48 pairs, measured rather than judged; the worst is 4.58. Four of them were
 between 3.0 and 4.4 before the pass — faint text, the syntax punctuation, and the success and danger
-pills. If you change the palette in `tokens.css`, re-measure rather than eyeball it.
+pills. If you change the palette in `tokens.css`, re-measure rather than eyeball it. They were measured again when the accent moved from indigo to teal and the violet and rose
+tints gave way to blue, brown and olive; the worst pair is still 4.58. Warnings are amber and only errors
+are red.
 
 ## How the app fits together
 

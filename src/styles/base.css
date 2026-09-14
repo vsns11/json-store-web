@@ -671,9 +671,9 @@
 .notice {
   margin: 0 0 14px;
   padding: 9px 12px;
-  background: var(--danger-soft);
+  background: var(--warn-soft);
   border-radius: var(--radius-sm);
-  color: var(--danger);
+  color: var(--warn);
   font-size: 12.5px;
   line-height: 1.5;
 }
@@ -691,6 +691,12 @@
 .notice ul {
   margin: 4px 0 0;
   padding-left: 18px;
+}
+
+/* Same shape, for something that went wrong. */
+.notice-error {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 /* Same shape, but for something worth knowing rather than something to be careful about. */

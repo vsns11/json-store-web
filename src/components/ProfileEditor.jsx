@@ -4,7 +4,7 @@ import { byteSize, describeShape, parseJson, sortJsonKeys } from '../lib/json.js
 import { DEFAULT_DOCUMENT, invalidDocuments, sortByName, toPayload, toTexts } from '../lib/documents.js'
 import { downloadJson } from '../lib/files.js'
 import { loadCatalog } from '../lib/catalog.js'
-import { compose, fieldCards, fieldProblems, fieldsFor, groupProblems } from '../lib/template.js'
+import { compose, fieldCards, fieldProblems, fieldsFor, groupProblems, unknownTemplates } from '../lib/template.js'
 import { inferTemplate } from '../lib/templateMatch.js'
 import { combineProfiles, describeOverlap } from '../lib/combine.js'
 import { useToasts } from '../hooks/useToasts.jsx'
@@ -158,6 +158,8 @@ export default function ProfileEditor({
             setDraft((current) => ({ ...current, documents: textsOf(result.payload) }))
           }
         }
+        // A profile made with another catalogue has no fields here, so it opens on what it holds.
+        if (unknownTemplates(loaded, opened?.template?.selection).length > 0) setView('tree')
         if (opened && !opened.template) {
           const match = inferTemplate(loaded, opened.payload)
           if (match) {
@@ -188,6 +190,9 @@ export default function ProfileEditor({
   // An existing profile is governed by templates once it has a selection; its pickers are then
   // settled and hidden. While creating one, they stay on screen so the rest can be chosen.
   const governed = hasSelection(template)
+  // Templates this profile was made with that the catalogue in use does not have.
+  const foreign = useMemo(() => unknownTemplates(catalog, template.selection), [catalog, template])
+  const fits = foreign.length === 0
 
   const cards = useMemo(
     () => (catalog && template ? fieldCards(catalog, template.selection) : []),
@@ -195,7 +200,7 @@ export default function ProfileEditor({
   )
   // What would stop a save, by the rules the server checks: required groups first, then fields. A
   // profile that was never built from templates has none, because saving it changes only its details.
-  const checked = isNew || governed
+  const checked = isNew || (governed && fits)
   const problems = useMemo(
     () =>
       catalog && checked
@@ -230,10 +235,10 @@ export default function ProfileEditor({
 
   // jsonb does not preserve key order, so the comparison has to ignore it.
   const matchesTemplate = useMemo(() => {
-    if (!catalog || !hasSelection(template)) return true
+    if (!catalog || !hasSelection(template) || !fits) return true
     const fromTemplate = JSON.stringify(compose(catalog, template.selection, template.values).payload)
     return sortJsonKeys(fromTemplate).text === sortJsonKeys(JSON.stringify(toPayload(draft.documents))).text
-  }, [catalog, template, draft.documents])
+  }, [catalog, template, fits, draft.documents])
 
   const patch = (changes) => setDraft((current) => ({ ...current, ...changes }))
 
@@ -276,7 +281,8 @@ export default function ProfileEditor({
         name: draft.name.trim(),
         description: draft.description.trim() || null,
         tags: draft.tags,
-        template: governed ? template : null,
+        // A profile made with another catalogue cannot be rebuilt here, so saving changes only its details.
+        template: governed && fits ? template : null,
       }
       const result = isNew
         ? await api.create(body)
@@ -424,7 +430,19 @@ export default function ProfileEditor({
                 should have it.
               </p>
             )}
-            {governed && inferred ? (
+            {!fits ? (
+              <div className="notice notice-info">
+                <p>
+                  This profile was made with templates the catalogue in use does not have:{' '}
+                  {foreign.map((item) => `${item.group} “${item.template}”`).join(', ')}. It was most likely saved while
+                  the API was serving a different catalogue.
+                </p>
+                <p>
+                  Its inputs are kept exactly as stored, and the Tree tab shows them. Its name, description and tags
+                  can still be changed. To build it again with this catalogue, start a new profile.
+                </p>
+              </div>
+            ) : governed && inferred ? (
               <p className="notice notice-info">
                 This profile was saved before its templates were recorded, so the fields below were
                 matched to the inputs. Changing one rebuilds the inputs from the templates — which may
@@ -447,7 +465,8 @@ export default function ProfileEditor({
               )
             )}
             {/* disabled on a fieldset disables every control inside it, however deeply nested. */}
-            <fieldset className="form-fieldset" disabled={!canEdit}>
+            {fits && (
+              <fieldset className="form-fieldset" disabled={!canEdit}>
               <TemplateForm
                 catalog={catalog}
                 selection={template.selection}
@@ -462,6 +481,7 @@ export default function ProfileEditor({
                 onValue={(key, value) => recompose(template.selection, { ...template.values, [key]: value })}
               />
             </fieldset>
+            )}
           </div>
         ) : catalogError ? (
           <div className="table-message">

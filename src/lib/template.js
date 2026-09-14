@@ -118,6 +118,24 @@ function composeDocument(catalog, selection, values) {
   return documents
 }
 
+/**
+ * The chosen templates the catalogue in use does not offer. A profile saved while the API served a
+ * different catalogue — the test-scenario one, say, before it was switched to TMF702 — names groups
+ * and templates this one has never heard of, so there are no fields to show and nothing to rebuild from.
+ *
+ * @returns {{group: string, template: string}[]}
+ */
+export function unknownTemplates(catalog, selection) {
+  if (!catalog) return []
+  return Object.entries(selection ?? {})
+    .filter(([, template]) => template)
+    .filter(([group, template]) => {
+      const known = catalog.fragments.find((fragment) => fragment.id === template)
+      return !catalog.groups.some((item) => item.id === group) || known?.group !== group
+    })
+    .map(([group, template]) => ({ group, template }))
+}
+
 /** Required groups with no template chosen yet, keyed `group:<id>` so they sit beside field problems. */
 export function groupProblems(catalog, selection) {
   if (!catalog) return []

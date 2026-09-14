@@ -14,33 +14,34 @@
   --text: #131923;
   --text-muted: #667085;
   --text-faint: #69707d;
-  --accent: #4f46e5;
-  --accent-soft: #eef0ff;
+  --accent: #0e7490;
+  --accent-soft: #e3f3f6;
   --accent-contrast: #ffffff;
   --success: #0d7d55;
   --success-soft: #e6f6ef;
   --danger: #ce2b1e;
   --danger-soft: #fdecea;
   --warn: #b54708;
+  --warn-soft: #fdf1e3;
   /* Every colour below carries text, so every one of them clears 4.5:1 against the surface it
      is drawn on, in BOTH themes. Measured 2026-09-12 with a WCAG contrast pass over each pair
      the components actually use; the readings are in the README. If you change one, re-run that
      pass rather than eyeballing it — four of these were between 3.0 and 4.4 before it. */
   /* Syntax colours, shared by the tree and the table's previews. */
-  --code-key: #4f46e5;
+  --code-key: #1d4ed8;
   --code-string: #0d7d55;
   --code-number: #c2410c;
-  --code-boolean: #7c3aed;
+  --code-boolean: #0369a1;
   --code-punct: #69707d;
   /* Tints for tags and monograms. Anything can be given a stable colour by name;
      add a pair here and raise PALETTE_SIZE in lib/palette.js to widen the set. */
-  --tint-0-bg: #eceefe; --tint-0-fg: #4338ca;
+  --tint-0-bg: #e3ecfd; --tint-0-fg: #1d4ed8;
   --tint-1-bg: #e2f5f1; --tint-1-fg: #0f766e;
   --tint-2-bg: #fdf0dd; --tint-2-fg: #b15209;
-  --tint-3-bg: #fde9ed; --tint-3-fg: #be123c;
+  --tint-3-bg: #f5ebe2; --tint-3-fg: #8a4b22;
   --tint-4-bg: #e6f5ea; --tint-4-fg: #157d3c;
   --tint-5-bg: #e2f1fc; --tint-5-fg: #0369a1;
-  --tint-6-bg: #f2eafd; --tint-6-fg: #7c3aed;
+  --tint-6-bg: #eef3dc; --tint-6-fg: #56650c;
   --tint-7-bg: #eaeef4; --tint-7-fg: #475569;
 
   --overlay: rgb(9 12 18 / 45%);
@@ -63,26 +64,27 @@
   --text: #e6eaf2;
   --text-muted: #98a2b3;
   --text-faint: #778190;
-  --accent: #8b87ff;
-  --accent-soft: #1d1c33;
+  --accent: #2bb5cc;
+  --accent-soft: #0d262c;
   --accent-contrast: #0b0e14;
   --success: #3fd39a;
   --success-soft: #10281f;
   --danger: #ff7a70;
   --danger-soft: #2a1512;
   --warn: #f0a35e;
-  --code-key: #8b87ff;
+  --warn-soft: #2a1d10;
+  --code-key: #8fb2ff;
   --code-string: #3fd39a;
   --code-number: #f0a35e;
-  --code-boolean: #b7a4ff;
+  --code-boolean: #7dd3fc;
   --code-punct: #778190;
-  --tint-0-bg: #1d1b3d; --tint-0-fg: #a5a1ff;
+  --tint-0-bg: #16213a; --tint-0-fg: #93b4ff;
   --tint-1-bg: #0f2b28; --tint-1-fg: #5eead4;
   --tint-2-bg: #2c2011; --tint-2-fg: #fbbf24;
-  --tint-3-bg: #2d1219; --tint-3-fg: #fda4af;
+  --tint-3-bg: #2a1d14; --tint-3-fg: #e5a67d;
   --tint-4-bg: #10261b; --tint-4-fg: #86efac;
   --tint-5-bg: #0d2131; --tint-5-fg: #7dd3fc;
-  --tint-6-bg: #221537; --tint-6-fg: #c4b5fd;
+  --tint-6-bg: #1f2410; --tint-6-fg: #c6dc6f;
   --tint-7-bg: #1a1f27; --tint-7-fg: #cbd5e1;
 
   --overlay: rgb(0 0 0 / 55%);

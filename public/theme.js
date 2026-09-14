@@ -1,6 +1,6 @@
 // Runs before the bundle, and after config.js, so the page is painted in the right theme AND the
 // right colour from the first frame. Without it a dark-theme user sees a white flash on every
-// load, and a workspace with its own accent sees this app's indigo first.
+// load, and a workspace with its own accent sees this app's teal first.
 (function () {
   var root = document.documentElement
   var cfg = window.__APP_CONFIG__ || {}

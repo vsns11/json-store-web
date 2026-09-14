@@ -101,7 +101,7 @@ export default function FromSavedDialog({ onClose, onOpen }) {
           you save it. Where two overlap, the one picked later is used.
         </p>
         {error && (
-          <p className="notice" role="alert">
+          <p className="notice notice-error" role="alert">
             {error}
           </p>
         )}
